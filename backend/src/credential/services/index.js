@@ -2,14 +2,13 @@ import {
   createVerifiableCredentialJwt,
   createVerifiablePresentationJwt,
   verifyCredential,
-  JwtCredentialPayload,
-  JwtPresentationPayload,
+  // JwtCredentialPayload,
+  // JwtPresentationPayload,
   verifyPresentation,
 } from "did-jwt-vc";
 import { getResolver } from "ethr-did-resolver";
 import { Resolver } from "did-resolver";
 import { EthrDID } from "ethr-did";
-import { createDIDJWT } from "../../did/services";
 import { ES256KSigner, hexToBytes } from "did-jwt";
 
 const issuer = new EthrDID({
@@ -20,7 +19,7 @@ const issuer = new EthrDID({
 
 /**
  * Creates a Verifiable Credential
- * @param {JwtCredentialPayload} vcPayload - The payload of the verifiable credential
+ * @param {*} vcPayload - The payload of the verifiable credential
  * @param {string} issuerDID - The did of the issuer
  * @param {string} issuerPrivateKey - The private key of the issuer
  */
@@ -46,13 +45,12 @@ const verifyCredentialJWT = async (vcJwt) => {
     ...getResolver({ infuraProjectId: "4f653d2d351148769fd1017be6f45d45" }),
   });
   const verifiedVC = await verifyCredential(vcJwt, resolver);
-  console.log(verifiedVC);
   return verifiedVC;
 };
 
 /**
  * Creates a Verifiable Credential
- * @param {JwtPresentationPayload} vpPayload - The payload of the verifiable credential
+ * @param {*} vpPayload - The payload of the verifiable credential
  * @param {string} issuerDID - The did of the issuer
  * @param {string} issuerPrivateKey - The private key of the issuer
  */

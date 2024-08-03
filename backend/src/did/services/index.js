@@ -8,7 +8,9 @@ import {
 import { ethers } from "ethers";
 import { Resolver } from "did-resolver";
 import { getResolver } from "ethr-did-resolver";
-import { configDotenv } from "dotenv";
+import dotenv from "dotenv";
+import axios from "axios";
+dotenv.config();
 // require("dotenv").config();
 // configDotenv
 /**
@@ -16,6 +18,9 @@ import { configDotenv } from "dotenv";
  * @param {string} privateKey
  * @param {"did:ethr" | "did:key"} method
  */
+
+const pinataGateway = "https://api.pinata.cloud";
+
 const generateDID = (privateKey, method) => {
   const signer = new ethers.Wallet(privateKey);
   const address = signer.address;
@@ -66,7 +71,7 @@ const decodeDIDJWT = (jwt) => {
 };
 
 /**
- *
+ * Returns the verified DID document
  * @param {string} jwt the jwt to verify
  */
 const verifyJwt = async (jwt) => {
@@ -81,4 +86,25 @@ const verifyJwt = async (jwt) => {
   return verificationResponse;
 };
 
-export { createDIDJWT, decodeDIDJWT, verifyJwt };
+/**
+ * Stores the decoded data document of the DID JWT on IPFS
+ * @returns {Promise<string>} returns the CID
+ */
+const storeDecodedJWTIPFS = async (decodedDIDJWT) => {
+  const decodedDIDJWTJson = JSON.stringify(decodedDIDJWT);
+  console.log(decodedDIDJWTJson);
+  const response = await axios.post(
+    `${pinataGateway}/pinning/pinJSONToIPFS`,
+    decodedDIDJWT,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.PINATA_JWT}`,
+      },
+    }
+  );
+  const cid = response.data.IpfsHash;
+  return cid;
+};
+
+export { createDIDJWT, decodeDIDJWT, verifyJwt, storeDecodedJWTIPFS };
