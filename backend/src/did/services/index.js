@@ -10,17 +10,14 @@ import { Resolver } from "did-resolver";
 import { getResolver } from "ethr-did-resolver";
 import dotenv from "dotenv";
 import axios from "axios";
+import { contract, storeDataOnIPFS } from "../../index.js";
 dotenv.config();
-// require("dotenv").config();
-// configDotenv
+
 /**
  * @returns {string} returns the did
  * @param {string} privateKey
  * @param {"did:ethr" | "did:key"} method
  */
-
-const pinataGateway = "https://api.pinata.cloud";
-
 const generateDID = (privateKey, method) => {
   const signer = new ethers.Wallet(privateKey);
   const address = signer.address;
@@ -40,7 +37,6 @@ const generateDID = (privateKey, method) => {
 const createDIDJWT = async (subject, privateKey, method) => {
   const signer = ES256KSigner(hexToBytes(privateKey));
   const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 5; // days
-  console.log(expiry);
   const did = generateDID(privateKey, method);
   console.log(did);
   const jwt = await createJWT(
@@ -59,6 +55,14 @@ const createDIDJWT = async (subject, privateKey, method) => {
       typ: "JWT",
     }
   );
+  const decodedDIDDoc = decodeDIDJWT(jwt);
+  const decodedDIDDocJson = JSON.stringify(decodedDIDDoc);
+  const decodedDIDDocHash = await storeDataOnIPFS(decodedDIDDocJson);
+  console.log("Decoded DID document stored on IPFS with ->", decodedDIDDocHash);
+  const signer_ethers = new ethers.BaseWallet(privateKey, provider);
+  contract.connect(signer_ethers);
+  const tx = await contract.setResolvableDIDHash(decodedDIDDocHash);
+  console.log("Transaction Processed: ", tx);
   return jwt;
 };
 
@@ -74,7 +78,7 @@ const decodeDIDJWT = (jwt) => {
  * Returns the verified DID document
  * @param {string} jwt the jwt to verify
  */
-const verifyJwt = async (jwt) => {
+const verifyDIDJwt = async (jwt) => {
   const resolver = new Resolver({
     ...getResolver({ infuraProjectId: "4f653d2d351148769fd1017be6f45d45" }),
   });
@@ -86,25 +90,21 @@ const verifyJwt = async (jwt) => {
   return verificationResponse;
 };
 
-/**
- * Stores the decoded data document of the DID JWT on IPFS
- * @returns {Promise<string>} returns the CID
- */
-const storeDecodedJWTIPFS = async (decodedDIDJWT) => {
-  const decodedDIDJWTJson = JSON.stringify(decodedDIDJWT);
-  console.log(decodedDIDJWTJson);
-  const response = await axios.post(
-    `${pinataGateway}/pinning/pinJSONToIPFS`,
-    decodedDIDJWT,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.PINATA_JWT}`,
-      },
+const isDIDOnChainVerified = async (userDID, didJWT) => {
+  // on-chain verification
+  const user_address = userDID.split(":")[2];
+  contract.connect(provider);
+  const userDIDs = await contract.retrieveResolvableDIDHash(user_address);
+  const isVerified = false;
+  userDIDs.map(async (udid) => {
+    const response = await axios.get(`https://ipfs.io/ipfs/${udid}`);
+    const { signature, data } = response.data.decoded_data;
+    const ipfsDIDJWT = data + "." + signature;
+    if (ipfsDIDJWT === didJWT) {
+      isVerified = true;
     }
-  );
-  const cid = response.data.IpfsHash;
-  return cid;
+  });
+  return isVerified;
 };
 
-export { createDIDJWT, decodeDIDJWT, verifyJwt, storeDecodedJWTIPFS };
+export { createDIDJWT, decodeDIDJWT, verifyDIDJwt, isDIDOnChainVerified };
