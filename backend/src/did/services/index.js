@@ -8,10 +8,13 @@ import {
 import { ethers } from "ethers";
 import { Resolver } from "did-resolver";
 import { getResolver } from "ethr-did-resolver";
-import dotenv from "dotenv";
 import axios from "axios";
-import { contract, storeDataOnIPFS } from "../../index.js";
-dotenv.config();
+import {
+  contract,
+  pinataIPFSGateway,
+  provider,
+  storeDataOnIPFS,
+} from "../../index.js";
 
 /**
  * @returns {string} returns the did
@@ -59,9 +62,9 @@ const createDIDJWT = async (subject, privateKey, method) => {
   const decodedDIDDocJson = JSON.stringify(decodedDIDDoc);
   const decodedDIDDocHash = await storeDataOnIPFS(decodedDIDDocJson);
   console.log("Decoded DID document stored on IPFS with ->", decodedDIDDocHash);
-  const signer_ethers = new ethers.BaseWallet(privateKey, provider);
-  contract.connect(signer_ethers);
-  const tx = await contract.setResolvableDIDHash(decodedDIDDocHash);
+  const signer_ethers = new ethers.Wallet(privateKey, provider);
+  const signerContract = contract.connect(signer_ethers);
+  const tx = await signerContract.setResolvableDIDHash(decodedDIDDocHash);
   console.log("Transaction Processed: ", tx);
   return jwt;
 };
@@ -93,17 +96,26 @@ const verifyDIDJwt = async (jwt) => {
 const isDIDOnChainVerified = async (userDID, didJWT) => {
   // on-chain verification
   const user_address = userDID.split(":")[2];
-  contract.connect(provider);
-  const userDIDs = await contract.retrieveResolvableDIDHash(user_address);
-  const isVerified = false;
-  userDIDs.map(async (udid) => {
-    const response = await axios.get(`https://ipfs.io/ipfs/${udid}`);
-    const { signature, data } = response.data.decoded_data;
-    const ipfsDIDJWT = data + "." + signature;
-    if (ipfsDIDJWT === didJWT) {
-      isVerified = true;
-    }
-  });
+  console.log("User address -> ", user_address);
+  const provider_contract = contract.connect(provider);
+  const userDIDs = await provider_contract.retrieveResolvableDIDHash(
+    user_address
+  );
+  console.log(userDIDs);
+  let isVerified = false;
+  await Promise.all(
+    userDIDs.map(async (udid) => {
+      // const response = await axios.get(`https://ipfs.io/ipfs/${udid}`);
+      const response = await axios.get(`${pinataIPFSGateway}/${udid}`);
+      const responseDataAud = response.data.payload.aud;
+      const ipfsDIDJWT = response.data.data + "." + response.data.signature;
+      console.log(ipfsDIDJWT, didJWT, responseDataAud, userDID);
+      if (ipfsDIDJWT === didJWT) {
+        console.log("true");
+        isVerified = true;
+      }
+    })
+  );
   return isVerified;
 };
 

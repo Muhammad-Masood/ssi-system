@@ -11,7 +11,14 @@ import { ES256KSigner, hexToBytes } from "did-jwt";
 import { ethers } from "ethers";
 import crypto from "crypto";
 import dotenv from "dotenv";
-import { contract, provider, storeDataOnIPFS } from "../../index.js";
+import {
+  contract,
+  pinataIPFSGateway,
+  provider,
+  storeDataOnIPFS,
+} from "../../index.js";
+import CryptoJS from "crypto-js";
+import axios from "axios";
 
 dotenv.config();
 
@@ -38,7 +45,10 @@ const createVerifiableCredential = async (
   };
   const vcJwt = await createVerifiableCredentialJwt(vcPayload, issuer);
   // store credential document on IPFS
-  const vcDoc = await verifyCredential(vcJwt);
+  const resolver = new Resolver({
+    ...getResolver({ infuraProjectId: "4f653d2d351148769fd1017be6f45d45" }),
+  });
+  const vcDoc = await verifyCredential(vcJwt, resolver);
   const vcDocJson = JSON.stringify(vcDoc);
   const cid = await storeDataOnIPFS(vcDocJson);
   console.log("Credential stored on IPFS with -> ", cid);
@@ -46,9 +56,9 @@ const createVerifiableCredential = async (
   console.log("Encrypted CID -> ", encryptedCID);
   const holderDID = vcPayload.sub;
   const holderAddress = holderDID.split(":")[2];
-  const signer = new ethers.BaseWallet(issuerPrivateKey, provider);
-  contract.connect(signer);
-  const tx = await contract.setIssuedCertificateHash(
+  const signer = new ethers.Wallet(issuerPrivateKey, provider);
+  const signer_contract = contract.connect(signer);
+  const tx = await signer_contract.setIssuedCertificateHash(
     holderAddress,
     encryptedCID
   );
@@ -77,26 +87,34 @@ const isCertificateOnChainVerified = async (
   // on-chain verification
   const issuer_address = issuerDID.split(":")[2];
   const holder_address = holderDID.split(":")[2];
-  contract.connect(provider);
-  const userIssuedCertificates = await contract.userToIssuedCertificates(
+  const signer_contract = contract.connect(provider);
+  const userIssuedCertificates = await signer_contract.userToIssuedCertificates(
     issuer_address
   );
-  const userOwnedCertificates = await contract.userToIssuedCertificates(
+  const userOwnedCertificates = await signer_contract.userToOwnedCertificates(
     holder_address
   );
+  console.log("userIssuedCertificates -> ", userIssuedCertificates);
+  console.log("userOwnedCertificates -> ", userOwnedCertificates);
   const matchingCertificates = userIssuedCertificates.filter((icid) =>
     userOwnedCertificates.find((ocid) => ocid === icid)
   );
-  const isVerified = false;
-  matchingCertificates.map(async (m_encCID) => {
-    const mCID = decryptCIDHash(privateKey, m_encCID);
-    const response = await axios.get(`https://ipfs.io/ipfs/${mCID}`);
-    const fetchedJWT = response.data.jwt;
-    console.log("Fetched from IPFS -> ", fetchedJWT);
-    if (fetchedJWT === jwt) {
-      isVerified = true;
-    }
-  });
+  let isVerified = false;
+  await Promise.all(
+    matchingCertificates.map(async (m_encCID) => {
+      const mCID = decryptCIDHash(privateKey, m_encCID);
+      console.log("decrypted CID -> ", mCID);
+      if (mCID) {
+        // const response = await axios.get(`https://ipfs.io/ipfs/${mCID}`);
+        const response = await axios.get(`${pinataIPFSGateway}/${mCID}`);
+        const fetchedJWT = response.data.jwt;
+        console.log("Fetched from IPFS -> ", fetchedJWT);
+        if (fetchedJWT === jwt) {
+          isVerified = true;
+        }
+      }
+    })
+  );
   return isVerified;
 };
 
@@ -128,10 +146,25 @@ const verifyCredentialPresentation = async (vpJwt) => {
 };
 
 const encryptCIDHash = (privateKey, cidHash) => {
-  const ivBuffer = Buffer.from(process.env.ENCODE_BUFFER_SECRET, "base64");
-  const cipher = crypto.createCipheriv("aes-256-ocb", privateKey, ivBuffer);
-  const encrypted = Buffer.concat([cipher.update(cidHash), cipher.final()]);
-  return encrypted.toString("hex");
+  const argsHash = CryptoJS.SHA256(
+    privateKey + process.env.ENCODE_BUFFER_SECRET
+  ).toString(CryptoJS.enc.Hex);
+  const encryptedAES = CryptoJS.AES.encrypt(cidHash, argsHash, {
+    mode: CryptoJS.mode.ECB,
+    padding: CryptoJS.pad.Pkcs7,
+  });
+  return encryptedAES.toString();
+  // const keyBuffer = Buffer.from(privateKey, "hex");
+  // const ivBuffer = Buffer.from(process.env.ENCODE_BUFFER_SECRET, "base64");
+  // console.log(keyBuffer, ivBuffer);
+  // if (ivBuffer.length !== 12) {
+  // throw new Error("Invalid IV length. IV must be 12 bytes long.");
+  // }
+  // const cipher = crypto.createCipheriv("aes-256-ccm", keyBuffer, ivBuffer, {
+  // authTagLength: 16,
+  // });
+  // const encrypted = Buffer.concat([cipher.update(cidHash), cipher.final()]);
+  // return encrypted.toString("hex");
 };
 
 /**
@@ -141,14 +174,26 @@ const encryptCIDHash = (privateKey, cidHash) => {
  * @returns
  */
 const decryptCIDHash = (privateKey, encryptedCID) => {
-  const ivBuffer = Buffer.from(process.env.ENCODE_BUFFER_SECRET, "base64");
-  const encrypted = Buffer.from(encryptedCID, "hex");
-  const decipher = crypto.createDecipheriv("aes-256-ocb", privateKey, ivBuffer);
-  const decrypted = Buffer.concat([
-    decipher.update(encrypted),
-    decipher.final(),
-  ]);
-  return decrypted.toString();
+  const argsHash = CryptoJS.SHA256(
+    privateKey + process.env.ENCODE_BUFFER_SECRET
+  ).toString(CryptoJS.enc.Hex);
+  const decrypted = CryptoJS.AES.decrypt(encryptedCID, argsHash, {
+    mode: CryptoJS.mode.ECB,
+    padding: CryptoJS.pad.Pkcs7,
+  });
+  // const keyBuffer = Buffer.from(privateKey, "hex");
+  // const ivBuffer = Buffer.from(process.env.ENCODE_BUFFER_SECRET, "base64");
+  // const encrypted = Buffer.from(encryptedCID, "hex");
+  // const decipher = crypto.createDecipheriv("aes-256-", keyBuffer, ivBuffer, {
+  //   authTagLength: 16,
+  // });
+  // console.log(decipher);
+  // const decrypted = Buffer.concat([
+  //   decipher.update(encrypted),
+  //   decipher.final(),
+  // ]);
+  // console.log(decrypted.toString());
+  return decrypted.toString(CryptoJS.enc.Utf8);
 };
 
 export {

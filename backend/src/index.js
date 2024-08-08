@@ -17,11 +17,15 @@ import axios from "axios";
 import crypto from "crypto";
 import { ethers } from "ethers";
 import { contract_abi, contract_address } from "./contract.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 const port = 3000;
 app.use(bodyParser.json());
 const pinataGateway = "https://api.pinata.cloud";
+export const pinataIPFSGateway =
+  "https://pink-gentle-krill-627.mypinata.cloud/ipfs";
 
 //////////////////////////////////////
 //////////// Smart Contract /////////
@@ -96,15 +100,22 @@ app.get("/dids/verify_did_jwt", async (req, res) => {
   if (!token) {
     return res.status(400).json({ error: "Invalid token" });
   }
-  const verificationResponse = await verifyDIDJwt(token);
-  const onChainVerificationResponse = await isDIDOnChainVerified(
-    verificationResponse.payload.sub,
-    token
-  );
-  return res.status(200).json({
-    offChainVerificationStatus: verificationResponse.verified,
-    onChainVerificationStatus: onChainVerificationResponse,
-  });
+  try {
+    const verificationResponse = await verifyDIDJwt(token);
+    console.log("tokennnn", token);
+    const onChainVerificationResponse = await isDIDOnChainVerified(
+      verificationResponse.payload.aud,
+      token
+    );
+    return res.status(200).json({
+      offChainVerificationStatus: verificationResponse.verified,
+      onChainVerificationStatus: onChainVerificationResponse,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: "Failed to verify DID", details: error.message });
+  }
 });
 
 ////////////////////////////////
@@ -148,6 +159,7 @@ app.post("/vc/create_vc", async (req, res) => {
     issuerDID,
     issuerPrivateKey
   );
+  console.log("vc_token -> ", vcJwt);
   const vpPayload = {
     vp: {
       "@context": ["https://www.w3.org/2018/credentials/v1"],
@@ -171,18 +183,27 @@ app.get("/vc/verify_vc", async (req, res) => {
   if (!vcJwt) {
     return res.status(400).json({ error: "vc-jwt not found." });
   }
-  const verificationResponse = await verifyCredentialJWT(vcJwt);
-  const issuer_did = verificationResponse.payload.iss;
-  const holder_did = verificationResponse.payload.sub;
-  const onChainVerificationResponse = await isCertificateOnChainVerified(
-    issuer_did,
-    holder_did,
-    privateKey,
-    vcJwt
-  );
-  return res
-    .status(200)
-    .json({ verificationResponse, onChainVerificationResponse });
+  if (!privateKey) {
+    return res.status(400).json({ error: "private-key not found." });
+  }
+  try {
+    const verificationResponse = await verifyCredentialJWT(vcJwt);
+    const issuer_did = verificationResponse.payload.iss;
+    const holder_did = verificationResponse.payload.sub;
+    console.log("issuer_did -> ", issuer_did);
+    console.log("holder_did -> ", holder_did);
+    const onChainVerificationResponse = await isCertificateOnChainVerified(
+      issuer_did,
+      holder_did,
+      privateKey,
+      vcJwt
+    );
+    return res
+      .status(200)
+      .json({ verificationResponse, onChainVerificationResponse });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 app.get("/vc/verify_vp", async (req, res) => {
@@ -190,16 +211,21 @@ app.get("/vc/verify_vp", async (req, res) => {
   if (!vpJwt) {
     return res.status(400).json({ error: "vp-jwt not found." });
   }
-  const vp = await verifyCredentialPresentation(vpJwt);
-  return res.status(200).json({ vp });
+  try {
+    const vp = await verifyCredentialPresentation(vpJwt);
+    return res.status(200).json({ vp });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log("Server is running on port " + port);
   // const buffer = Buffer.from([
-  //   0x18, 0x98, 0x61, 0x0e, 0x80, 0x4e, 0x21, 0x60, 0x66, 0x82, 0x4e, 0x8c,
-  //   0x0a, 0xf1, 0x83, 0xbb,
+  //   0x18, 0x98, 0x61, 0x0e, 0x80, 0x4e, 0x21, 0x60, 0x66, 0x82, 0x4e, 0x8c
   // ]);
+
+  // // Convert the buffer to a base64 string
   // const base64String = buffer.toString("base64");
   // console.log(base64String);
   // const bufferFromEnv = Buffer.from(base64String, "base64");
