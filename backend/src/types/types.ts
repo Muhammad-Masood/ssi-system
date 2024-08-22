@@ -19,3 +19,8 @@ export type Credentials = {
   address: string;
   access_token: string;
 }
+
+export type Wallet = {
+  privateKey: string;
+  address: string;
+}

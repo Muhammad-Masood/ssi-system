@@ -1,29 +1,28 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import {
-  IdentityContextProvider,
-  WalletContextProvider,
-} from "@/providers/Providers";
+import Providers, { WalletContextProvider } from "@/providers/Providers";
 import Navbar from "./components/Navbar";
 import { Toaster } from "@/components/ui/sonner";
+import { getSession } from "@/auth";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
   return (
     <html lang="en">
       <head>
         <title>ChainFusion</title>
       </head>
       <body className="bg-gray-100 px-4">
-        <WalletContextProvider>
-          <IdentityContextProvider>
+        <Providers session={session}>
+          <WalletContextProvider>
             <Navbar />
             {children}
-          </IdentityContextProvider>
-        </WalletContextProvider>
+          </WalletContextProvider>
+        </Providers>
         <Toaster />
       </body>
     </html>

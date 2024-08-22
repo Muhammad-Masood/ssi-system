@@ -52,7 +52,7 @@ const createVerifiableCredential = async (
   const vcDocJson = JSON.stringify(vcDoc);
   const cid = await storeDataOnIPFS(vcDocJson);
   console.log("Credential stored on IPFS with -> ", cid);
-  const encryptedCID = encryptCIDHash(issuerPrivateKey, cid);
+  const encryptedCID = encryptCIDHash(cid);
   console.log("Encrypted CID -> ", encryptedCID);
   const holderDID = vcPayload.sub;
   const holderAddress = holderDID.split(":")[2];
@@ -81,7 +81,7 @@ const verifyCredentialJWT = async (vcJwt) => {
 const isCertificateOnChainVerified = async (
   issuerDID,
   holderDID,
-  privateKey,
+  // privateKey,
   jwt
 ) => {
   // on-chain verification
@@ -102,7 +102,7 @@ const isCertificateOnChainVerified = async (
   let isVerified = false;
   await Promise.all(
     matchingCertificates.map(async (m_encCID) => {
-      const mCID = decryptCIDHash(privateKey, m_encCID);
+      const mCID = decryptCIDHash(m_encCID);
       console.log("decrypted CID -> ", mCID);
       if (mCID) {
         // const response = await axios.get(`https://ipfs.io/ipfs/${mCID}`);
@@ -145,15 +145,29 @@ const verifyCredentialPresentation = async (vpJwt) => {
   return verifiedPresentation;
 };
 
-const encryptCIDHash = (privateKey, cidHash) => {
-  const argsHash = CryptoJS.SHA256(
-    privateKey + process.env.ENCODE_BUFFER_SECRET
-  ).toString(CryptoJS.enc.Hex);
-  const encryptedAES = CryptoJS.AES.encrypt(cidHash, argsHash, {
-    mode: CryptoJS.mode.ECB,
-    padding: CryptoJS.pad.Pkcs7,
-  });
-  return encryptedAES.toString();
+const encryptCIDHash = (cidHash) => {
+  // const secret_key = crypto.randomBytes(16).toString("hex");
+  // const secret_nonce = crypto.randomBytes(12).toString("hex");
+  // const secret_key = "8ad03876c4e68dc3b3ec491a"
+  // const secret_nonce = "ec79eb3e97d08c7e5a4bc3959cbd0d3d"
+  const key = Buffer.from(process.env.SECRET_KEY, "hex");
+  const nonce = Buffer.from(process.env.SECRET_NONCE, "hex");
+  const cipher = crypto.createCipheriv("aes-128-gcm", key, nonce);
+  const encrypted = Buffer.concat([
+    cipher.update(cidHash, "utf8"),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag(); // Get the authentication tag
+  return Buffer.concat([encrypted, tag]).toString("base64");
+
+  // const argsHash = CryptoJS.SHA256(process.env.ENCODE_BUFFER_SECRET).toString(
+  //   CryptoJS.enc.Hex
+  // );
+  // const encryptedAES = CryptoJS.AES.encrypt(cidHash, argsHash, {
+  //   mode: CryptoJS.mode.ECB,
+  //   padding: CryptoJS.pad.Pkcs7,
+  // });
+  // return encryptedAES.toString();
   // const keyBuffer = Buffer.from(privateKey, "hex");
   // const ivBuffer = Buffer.from(process.env.ENCODE_BUFFER_SECRET, "base64");
   // console.log(keyBuffer, ivBuffer);
@@ -168,19 +182,18 @@ const encryptCIDHash = (privateKey, cidHash) => {
 };
 
 /**
- *
- * @param {string} privateKey
  * @param {string} encryptedCID
  * @returns
  */
-const decryptCIDHash = (privateKey, encryptedCID) => {
-  const argsHash = CryptoJS.SHA256(
-    privateKey + process.env.ENCODE_BUFFER_SECRET
-  ).toString(CryptoJS.enc.Hex);
-  const decrypted = CryptoJS.AES.decrypt(encryptedCID, argsHash, {
-    mode: CryptoJS.mode.ECB,
-    padding: CryptoJS.pad.Pkcs7,
-  });
+const decryptCIDHash = (encryptedCID) => {
+  // console.log(privateKey, encryptedCID);
+  // const argsHash = CryptoJS.SHA256(process.env.ENCODE_BUFFER_SECRET).toString(
+  //   CryptoJS.enc.Hex
+  // );
+  // const decrypted = CryptoJS.AES.decrypt(encryptedCID, argsHash, {
+  //   mode: CryptoJS.mode.ECB,
+  //   padding: CryptoJS.pad.Pkcs7,
+  // });
   // const keyBuffer = Buffer.from(privateKey, "hex");
   // const ivBuffer = Buffer.from(process.env.ENCODE_BUFFER_SECRET, "base64");
   // const encrypted = Buffer.from(encryptedCID, "hex");
@@ -193,7 +206,24 @@ const decryptCIDHash = (privateKey, encryptedCID) => {
   //   decipher.final(),
   // ]);
   // console.log(decrypted.toString());
-  return decrypted.toString(CryptoJS.enc.Utf8);
+  // console.log(decrypted.toString(CryptoJS.enc.Utf8));
+  // return decrypted.toString(CryptoJS.enc.Utf8);
+  // const secret_key = "8ad03876c4e68dc3b3ec491a"
+  // const secret_nonce = "ec79eb3e97d08c7e5a4bc3959cbd0d3d"
+  const key = Buffer.from(process.env.SECRET_KEY, "hex");
+  const nonce = Buffer.from(process.env.SECRET_NONCE, "hex");
+  const buffer = Buffer.from(encryptedCID, 'base64');
+  const encryptedText = buffer.slice(0, -16); // All but the last 16 bytes
+  const tag = buffer.slice(-16); // Last 16 bytes is the tag
+  
+  const decipher = crypto.createDecipheriv("aes-128-gcm", key, nonce);
+  decipher.setAuthTag(tag); // Set the authentication tag
+  const decrypted = Buffer.concat([
+    decipher.update(encryptedText),
+    decipher.final()
+  ]);
+
+  return decrypted.toString('utf8');
 };
 
 export {
@@ -202,4 +232,6 @@ export {
   verifyCredentialPresentation,
   createVCPresentation,
   isCertificateOnChainVerified,
+  decryptCIDHash,
+  encryptCIDHash,
 };

@@ -11,7 +11,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { issueCredFormSchema } from "@/lib/utils";
+import { DIDDB, issueCredFormSchema } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -19,28 +19,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useContext, useEffect, useState } from "react";
-import { IdentityContext, WalletContext } from "@/providers/Providers";
-import { Credential } from "cf-identity";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Label } from "@/components/ui/label";
+import { WalletContext } from "@/providers/Providers";
 import { toast } from "sonner";
+import { createCredential, fetchUserDIDs } from "../server";
+import axios from "axios";
 
 const IssueCredForm = () => {
-  const [issuerDIDs, setIssuerDIDs] = useState<string[]>([]);
-  const [didName, setDidName] = useState<string | undefined>(undefined);
+  const [issuerDIDs, setIssuerDIDs] = useState<DIDDB[]>([]);
   const [did, setDid] = useState<string>("");
-  const [credFormFields, setCredFormFields] = useState<any>({});
-  const { identitySDK } = useContext(IdentityContext);
+  const [selectedFile, setSelectedFile] = useState<any>();
+  const [previewImage, setPreviewImage] = useState<any>();
+  const [isLoading, setIsLoading] = useState(false);
   const { wallet } = useContext(WalletContext);
   const { isConnected } = wallet;
   const issueCredForm = useForm<z.infer<typeof issueCredFormSchema>>({
@@ -49,128 +41,86 @@ const IssueCredForm = () => {
 
   useEffect(() => {
     async function fetchDIDs() {
-      const issuer_dids = await identitySDK!.getDIDs(wallet.signer!.address);
+      const issuer_dids = await fetchUserDIDs(wallet.signer!.address);
       setIssuerDIDs(issuer_dids || []);
-      console.log(issuer_dids);
     }
     if (isConnected) {
       fetchDIDs();
     }
   }, [wallet]);
 
-  const generateDid = async (e: any) => {
-    e.preventDefault();
-    if (isConnected) {
-      try {
-        const did: string = identitySDK!.createIdentifier(
-          didName!,
-          wallet.signer!.address
-        );
-        await identitySDK!.storeDID(did, wallet.signer!.address);
-        toast.success("DID created successfully!");
-      } catch (e) {
-        console.log(e);
-        toast.error("Failed to create DID");
-      }
-    } else {
-      toast("Connect Wallet");
-    }
-  };
-
-  const handleAddField = (e: any) => {
-    e.preventDefault();
-    const updatedCredForm = { ...credFormFields, "": "" };
-    setCredFormFields(updatedCredForm);
-  };
-
-  const handleFieldKeyChange = (index: number, new_key: string) => {
-    // remove the space if there's any in the key
-    new_key = new_key.replace(/\s/g, "_");
-    // removing the field on the provided index
-    const entries = Object.entries(credFormFields);
-    entries.splice(index, 1);
-    const deletedFieldObj = Object.fromEntries(entries);
-    const updatedObj = Object.assign(deletedFieldObj, {
-      ...deletedFieldObj,
-      [new_key]: "",
-    });
-    setCredFormFields(updatedObj);
-  };
-
-  const handleFieldValueChange = (index: any, value: string, key: string) => {
-    const updatedFields = { ...credFormFields };
-    updatedFields[key] = value;
-    setCredFormFields(updatedFields);
-  };
-
-  const handleRemoveField = (index: number) => {
-    console.log(index);
-    const updatedFields = { ...credFormFields };
-    // Get the keys of the object
-    const keys = Object.keys(updatedFields);
-    // Check if the index is valid
-    if (index < 0 || index >= keys.length) {
-      console.error("Index is out of range");
-      return;
-    }
-    // Remove the key at the specified index
-    const deleteKey = keys[index];
-    delete updatedFields[deleteKey];
-    // Update the state with the new object
-    setCredFormFields(updatedFields);
-    // Log the updated state (it may not be immediately updated)
-    console.log(updatedFields);
-  };
-
   async function onSubmit(values: z.infer<typeof issueCredFormSchema>) {
     if (isConnected) {
-      const loadingId = toast.loading("Storing Credential...");
+      setIsLoading(true);
+      const loadingId = toast.loading("Issuing Credential...");
       values.issuer_address = wallet.signer!.address;
       values.issuer_did = did;
-      values.credential = credFormFields;
-      console.log(values);
-      const {
-        holder_address,
-        holder_did,
-        issuer_did,
-        credential,
-        issuer_address,
-      } = values;
-      const _credential: Credential = {
-        credential: credential,
-        holder_address: holder_address,
-        holder_did: holder_did,
-        issuer_address: issuer_address,
-        issuer_did: issuer_did,
-      };
-      console.log(_credential, _credential.credential);
+      const { certificate_name, issuer_address, holder_did, issuer_did } =
+        values;
       try {
-        const credHash: string | undefined = await identitySDK!.issueCredential(
-          _credential
+        console.log(values);
+        const pinataEndpoint =
+          process.env.NEXT_PUBLIC_PINATA_GATEWAY + "/pinning/pinFileToIPFS";
+        const form_data = new FormData();
+        form_data.append("file", selectedFile);
+        const { data } = await axios.post(pinataEndpoint, form_data, {
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        console.log("data -> ", data);
+        await createCredential(
+          certificate_name,
+          issuer_address,
+          issuer_did,
+          holder_did,
+          wallet.signer!.privateKey,
+          data.IpfsHash
         );
         toast.dismiss(loadingId);
-        toast.success(`Credential stored successfully with hash: ${credHash}`);
+        toast.success(`Credential stored successfully`);
       } catch (error) {
-        console.log(error);
         toast.error("Failed to store credential");
+        // setIsLoading(false);
+      } finally {
+        setIsLoading(false);
+        toast.dismiss(loadingId);
       }
     } else {
       toast("Connect Wallet");
     }
   }
 
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader?.result);
+      };
+      reader.readAsDataURL(file);
+      toast.success("File uploaded successfully!");
+    }
+  };
+
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto mt-10">
+      <h1 className="text-2xl font-semibold text-gray-800 text-center mb-6">
+        Issue Credential
+      </h1>
       <Form {...issueCredForm}>
         <form
           onSubmit={issueCredForm.handleSubmit(onSubmit)}
-          className="space-y-8 md:flex md:flex-wrap"
+          className="space-y-6"
         >
+          {/* Issuer Address */}
           <FormField
             control={issueCredForm.control}
             name="issuer_address"
             render={({ field }) => (
-              <FormItem className="md:w-1/2 px-3">
+              <FormItem>
                 <FormLabel>Your Address</FormLabel>
                 <FormControl>
                   <Input
@@ -186,161 +136,100 @@ const IssueCredForm = () => {
               </FormItem>
             )}
           />
+
+          {/* Issuer DID */}
           <FormField
             control={issueCredForm.control}
             name="issuer_did"
-            render={({ field }) =>
-              // a dropdown for issuer to choose did
-              // If no did found {generate_did}
+            render={() =>
               issuerDIDs.length > 0 ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger>
-                    {did ? did : "Choose DID"}
-                  </DropdownMenuTrigger>
-                  {issuerDIDs.map((did: string) => (
-                    <DropdownMenuContent key={did} className="mx-7">
-                      {/* <DropdownMenuLabel></DropdownMenuLabel> */}
-                      {/* <DropdownMenuSeparator /> */}
-                      <DropdownMenuItem
-                        onClick={() => setDid(did)}
-                        className=""
-                      >
-                        <p className="break-all">{did}</p>
-                      </DropdownMenuItem>
+                <FormItem>
+                  <FormLabel>Select Issuer DID</FormLabel>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full">
+                        {did ? did : "Choose DID"}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-full max-h-60 overflow-y-auto">
+                      {issuerDIDs.map((issuerDid, index) => (
+                        <DropdownMenuItem
+                          key={index}
+                          onClick={() => setDid(issuerDid.did)}
+                        >
+                          <p className="break-all">{issuerDid.did}</p>
+                        </DropdownMenuItem>
+                      ))}
                     </DropdownMenuContent>
-                  ))}
-                </DropdownMenu>
-              ) : (
-                <FormItem className="md:w-1/2">
-                  <FormControl>
-                    <div>
-                      <Input {...field} disabled value="No DID found" />
-                      <Accordion type="single" collapsible>
-                        <AccordionItem value="item-1">
-                          <AccordionTrigger className="text-sm pl-2">
-                            Generate
-                          </AccordionTrigger>
-                          <AccordionContent className="space-y-2 mx-2">
-                            <Label>Name</Label>
-                            <Input
-                              placeholder="i.e. university"
-                              value={didName}
-                              onChange={(e) => setDidName(e.target.value)}
-                              className=""
-                            />
-                            <Button onClick={generateDid}>Create</Button>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
+                  </DropdownMenu>
                 </FormItem>
+              ) : (
+                <p>No DID found</p>
               )
             }
           />
-          <FormField
-            control={issueCredForm.control}
-            name="holder_address"
-            render={({ field }) => (
-              <FormItem className="md:w-1/2 px-3">
-                <FormLabel>Holder Address</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+
+          {/* Holder DID */}
           <FormField
             control={issueCredForm.control}
             name="holder_did"
             render={({ field }) => (
-              <FormItem className="md:w-1/2">
+              <FormItem>
                 <FormLabel>Holder DID</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} placeholder="Enter Holder DID" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          {/* <FormField
+
+          {/* Credential Upload */}
+
+          <FormField
             control={issueCredForm.control}
-            name="credential"
+            name="certificate_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Credential</FormLabel>
+                <FormLabel>Certificate Name</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input
+                    {...field}
+                    placeholder="i.e Certified Respiratory Therapist"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
-          /> */}
+          />
+
           <FormField
             control={issueCredForm.control}
             name="credential"
             render={({ field }) => (
-              <FormItem className="md:w-1/2 lg:px-3 px-0">
-                <FormLabel>Credential</FormLabel>
-                <div>
-                  {Object.keys(credFormFields).map(
-                    (key: string, index: number) => (
-                      <div key={index} className="flex gap-x-3 pb-2">
-                        <Input
-                          className=""
-                          type="text"
-                          value={key}
-                          onChange={(e) =>
-                            handleFieldKeyChange(index, e.target.value)
-                          }
-                          placeholder="Field Name"
-                        />
-                        <Input
-                          type="text"
-                          value={credFormFields[key]}
-                          onChange={(e) =>
-                            handleFieldValueChange(index, e.target.value, key)
-                          }
-                          placeholder="Field Value"
-                        />
-                        <Button
-                          type="button"
-                          onClick={() => handleRemoveField(index)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    )
-                  )}
-                  <div className="space-y-4">
-                    <div className="flex flex-col w-1/4 gap-y-3 pt-2">
-                      <Button onClick={handleAddField}>Add Field</Button>
-                    </div>
-                    <div className="p-4 bg-gray-200 rounded-md shadow-md">
-                      <p className="text-xl font-semibold mb-4">
-                        Your Credential
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {Object.keys(credFormFields).map(
-                          (key: string, index: number) => (
-                            <div className="flex gap-x-4" key={index}>
-                              <p className="font-semibold">{key}</p>
-                              <p className="break-all">{credFormFields[key]}</p>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <FormItem>
+                <FormLabel>Upload Credential Document</FormLabel>
+                <FormControl>
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,.json"
+                    onChange={handleUpload}
+                    className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                </FormControl>
+                {selectedFile && (
+                  <p className="text-sm text-green-600 mt-2">
+                    {selectedFile.name} uploaded
+                  </p>
+                )}
               </FormItem>
             )}
           />
-          <div className="w-1/3 gap-y-3">
-            <Button type="submit" className="px-8 py-1">
-              Submit
+
+          {/* Submit Button */}
+          <div className="flex justify-center">
+            <Button type="submit" className="px-8 py-2" disabled={isLoading}>
+              Issue
             </Button>
           </div>
         </form>

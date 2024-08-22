@@ -15,15 +15,18 @@ import {
   provider,
   storeDataOnIPFS,
 } from "../../index.js";
+import crypto from "crypto";
+import { db } from "../../database/firebase.js";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+// import dock from "@docknetwork/sdk";
+// import { address, secretUri } from "./shared-constants";
 
 /**
  * @returns {string} returns the did
  * @param {string} privateKey
  * @param {"did:ethr" | "did:key"} method
  */
-const generateDID = (privateKey, method) => {
-  const signer = new ethers.Wallet(privateKey);
-  const address = signer.address;
+const generateDID = (address, method) => {
   if (method === "did:ethr") {
     return `did:ethr:${address}`;
   } else if (method === "did:key") {
@@ -32,15 +35,18 @@ const generateDID = (privateKey, method) => {
 };
 
 /**
- * @returns {Promise<string>} returns the jwt token for the did
+ * @returns {Promise<*>} returns the jwt token for the did
  * @param {string} subject the topic of the did
  * @param {"did:ethr" | "did:key"} method
  * @param {string} privateKey
  */
+// const createDIDJWT = async (subject, privateKey, method) => {
 const createDIDJWT = async (subject, privateKey, method) => {
   const signer = ES256KSigner(hexToBytes(privateKey));
   const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 5; // days
-  const did = generateDID(privateKey, method);
+  const signer_ethers = new ethers.Wallet(privateKey, provider);
+  const address = signer_ethers.address;
+  const did = generateDID(address, method);
   console.log(did);
   const jwt = await createJWT(
     {
@@ -62,11 +68,24 @@ const createDIDJWT = async (subject, privateKey, method) => {
   const decodedDIDDocJson = JSON.stringify(decodedDIDDoc);
   const decodedDIDDocHash = await storeDataOnIPFS(decodedDIDDocJson);
   console.log("Decoded DID document stored on IPFS with ->", decodedDIDDocHash);
-  const signer_ethers = new ethers.Wallet(privateKey, provider);
+  // store on the blockchain
   const signerContract = contract.connect(signer_ethers);
   const tx = await signerContract.setResolvableDIDHash(decodedDIDDocHash);
   console.log("Transaction Processed: ", tx);
-  return jwt;
+
+  // store on the database
+  // did document id -> user address
+  // find the existing document
+  try {
+    await setDoc(doc(db, "dids", jwt), {
+      user: address,
+      did: did,
+      ipfsHash: decodedDIDDocHash,
+    });
+  } catch (err) {
+    console.log(err);
+  }
+  return { jwt, decodedDIDDocHash };
 };
 
 /**

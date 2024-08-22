@@ -11,11 +11,8 @@ import { z } from "zod";
 export const issueCredFormSchema = z.object({
   issuer_did: z.any(),
   issuer_address: z.any(),
-  holder_did: z.string().min(64),
-  holder_address: z
-    .string()
-    .min(42, { message: "Invalid wallet address" })
-    .max(42, { message: "Invalid wallet address" }),
+  holder_did: z.string().min(12),
+  certificate_name: z.string().min(3),
   credential: z.any(),
 });
 
@@ -34,19 +31,30 @@ export type NavbarLink = {
 
 export const links: NavbarLink[] = [
   {
-    name: "Issue Credentials",
-    href: "/issue",
-  },
-  {
-    name: "Verify Credentials",
-    href: "/verify",
-  },
-  {
     name: "Profile",
     href: "/profile",
   },
   {
-    name: "Authorization",
-    href: "/auth",
+    name: "Issue Credentials",
+    href: "/issue",
   },
+  {
+    name: "Verify",
+    href: "/verify",
+  },
+  // {
+  //   name: "Authorization",
+  //   href: "/auth",
+  // },
 ];
+
+export type DIDDB = {
+  did: string;
+  token: string;
+}
+
+export type CredentialDB = {
+  user: string;
+  vp_jwt: string;
+  vc_jwt: string;
+}

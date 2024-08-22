@@ -1,19 +1,26 @@
 "use client";
 import { createContext, useState } from "react";
-import { JsonRpcProvider, JsonRpcSigner } from "ethers";
+import {
+  ethers,
+  JsonRpcProvider,
+  JsonRpcSigner,
+  Provider,
+  // Wallet,
+} from "ethers";
 import { BrowserProvider } from "ethers";
-import { DecentralizeIdentity } from "cf-identity";
+import { Session } from "next-auth";
+import { SessionProvider } from "next-auth/react";
 
 type Wallet = {
-  provider: JsonRpcProvider | undefined | BrowserProvider;
-  signer: JsonRpcSigner | undefined;
+  provider: undefined | Provider;
+  signer: undefined | ethers.Wallet;
   isConnected: boolean;
 };
 
 export const WalletContext = createContext({
   wallet: {
-    provider: undefined as BrowserProvider | JsonRpcProvider | undefined,
-    signer: undefined as JsonRpcSigner | undefined,
+    provider: undefined as undefined | Provider,
+    signer: undefined as undefined | ethers.Wallet,
     isConnected: false,
   },
   setWallet: (wallet: Wallet) => {},
@@ -39,22 +46,12 @@ export function WalletContextProvider({
   );
 }
 
-export const IdentityContext = createContext({
-  identitySDK: undefined as DecentralizeIdentity | undefined,
-  setIdentitySDK: (identitySDK: DecentralizeIdentity) => {},
-});
-
-export function IdentityContextProvider({
+export default function Providers({
+  session,
   children,
 }: {
+  session: Session | null;
   children: React.ReactNode;
 }) {
-  const [identitySDK, setIdentitySDK] = useState<
-    DecentralizeIdentity | undefined
-  >(undefined);
-  return (
-    <IdentityContext.Provider value={{ identitySDK, setIdentitySDK }}>
-      {children}
-    </IdentityContext.Provider>
-  );
+  return <SessionProvider session={session}>{children}</SessionProvider>;
 }
