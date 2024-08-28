@@ -21,15 +21,26 @@ export const authFormSchema = z.object({
     .string()
     .min(42, { message: "Invalid wallet address" })
     .max(42, { message: "Invalid wallet address" }),
-  credential: z.string().min(10, {message: "Invalid credential cid"}),
-})
+  credential: z.string().min(10, { message: "Invalid credential cid" }),
+});
 
 export type NavbarLink = {
   name: string;
   href: string;
 };
 
-export const links: NavbarLink[] = [
+export const userNavbarLinks: NavbarLink[] = [
+  {
+    name: "Profile",
+    href: "/profile",
+  },
+  {
+    name: "Auth",
+    href: "/auth",
+  },
+];
+
+export const issuerNavbarLinks: NavbarLink[] = [
   {
     name: "Profile",
     href: "/profile",
@@ -39,22 +50,32 @@ export const links: NavbarLink[] = [
     href: "/issue",
   },
   {
+    name: "Auth",
+    href: "/auth",
+  },
+];
+
+export const verifierNavbarLinks: NavbarLink[] = [
+  {
     name: "Verify",
     href: "/verify",
   },
-  // {
-  //   name: "Authorization",
-  //   href: "/auth",
-  // },
+  {
+    name: "Auth",
+    href: "/auth",
+  },
 ];
+
+// export const links: NavbarLink[] = [
+// ];
 
 export type DIDDB = {
   did: string;
   token: string;
-}
+};
 
 export type CredentialDB = {
   user: string;
   vp_jwt: string;
   vc_jwt: string;
-}
+};

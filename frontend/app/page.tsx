@@ -4,12 +4,31 @@ import image2 from "@/public/image2.svg";
 import Link from "next/link";
 import { getSession } from "@/auth";
 import { setupUserWallet } from "./server";
+import { NextResponse } from "next/server";
 
-export default async function Home() {
+export async function middleware(request: Request) {
+  const url = new URL(request.url);
+  const searchParams = url.searchParams;
+  return NextResponse.rewrite(
+    new URL(`/?tab=${searchParams.get("tab")}`, request.url)
+  );
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: { tab: string };
+}) {
+  const tab = searchParams.tab || "default";
+  console.log(tab);
   const session = await getSession();
-  if (session) setupUserWallet();
+  if (session) setupUserWallet(tab);
   return (
-    <></>
+    <div className="flex items-center justify-center h-screen leading-4">
+      <p className="text-3xl md:text-6xl lg:text-7xl font-bold tracking-wide opacity-35 text-gray-600 text-center">
+        Welcome to The Self Sovereign Identity Kit
+      </p>
+    </div>
     // <div className="p-4 lg:p-8">
     //   <div className="max-w-6xl mx-auto">
     //     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

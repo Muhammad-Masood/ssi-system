@@ -17,27 +17,6 @@ export function ConnectWallet() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = async () => {
-    // if ((window as any).ethereum == undefined) {
-    //   toast("Metamask is not installed!");
-    // } else {
-    //   try {
-    //     const provider = new ethers.BrowserProvider((window as any).ethereum);
-    //     const signer = await provider.getSigner();
-    //     console.log("signer", signer);
-    //     if (toNumber((await provider.getNetwork()).chainId) !== 97) {
-    //       toast("Connect to BSC Test Network");
-    //     } else {
-    //       setWallet({
-    //         provider: provider,
-    //         signer: signer,
-    //         isConnected: true,
-    //       });
-    //       // setIdentitySDK(decentralizedIdentity);
-    //     }
-    //   } catch (error) {
-    //     console.log(error);
-    //   }
-    // }
     try {
       // const dbwallet = await getUserWallet();
       const session = await getSessionServer();
@@ -51,10 +30,12 @@ export function ConnectWallet() {
           process.env.RPC_URL as string
         );
         const wallet = new ethers.Wallet(walletData.privateKey, provider);
+        console.log(walletData.tab);
         setWallet({
           provider: provider,
           signer: wallet,
           isConnected: true,
+          tab: walletData.tab,
         });
         setIsConnecting(false);
       } else {
@@ -78,11 +59,9 @@ export function ConnectWallet() {
           ? "Connecting..."
           : "Connect Wallet"}
       </Button>
-      {
-        wallet.signer?
-      <Badge className="ml-2 py-2">{wallet.signer.address}</Badge>
-      : null
-}
+      {wallet.signer ? (
+        <Badge className="ml-2 py-2">{wallet.signer.address}</Badge>
+      ) : null}
     </div>
   );
 }

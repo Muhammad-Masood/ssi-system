@@ -1,14 +1,24 @@
 "use client";
-import { NavbarLink, links } from "@/lib/utils";
+import {
+  NavbarLink,
+  issuerNavbarLinks,
+  userNavbarLinks,
+  verifierNavbarLinks,
+} from "@/lib/utils";
 import { ConnectWallet } from "./ConnectWallet";
 import Link from "next/link";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Menu } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { WalletContext } from "@/providers/Providers";
 // import { HiMenu, HiX } from "react-icons/hi";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<any>();
+  const { wallet } = useContext(WalletContext);
+  // const searchParams = useSearchParams();
+  // const tab = searchParams.get("tab");
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-white shadow-lg z-50">
@@ -35,22 +45,29 @@ const Navbar = () => {
             menuOpen ? "flex" : "hidden"
           } flex-col md:flex md:flex-row md:items-center gap-4 md:gap-8 mt-4 md:mt-0 absolute md:static top-16 left-0 right-0 bg-white md:bg-transparent p-4 md:p-0 shadow-lg md:shadow-none`}
         >
-          {links.map((link: NavbarLink, index: number) => (
+          {(wallet.tab === "issuer"
+            ? issuerNavbarLinks
+            : wallet.tab === "verifier"
+            ? verifierNavbarLinks
+            : userNavbarLinks
+          ).map((link: NavbarLink, index: number) => (
             <Link
               href={link.href}
               key={index}
-              className={`text-base md:text-lg lg:text-xl text-gray-700 hover:text-blue-700 hover:underline ${selectedLink===index?"text-blue-700":""} transition-colors duration-200 pl-2`}
+              className={`text-base md:text-lg lg:text-xl text-gray-700 hover:text-blue-700 hover:underline ${
+                selectedLink === index ? "text-blue-700" : ""
+              } transition-colors duration-200 pl-2`}
               onClick={() => {
                 setSelectedLink(index);
-                setMenuOpen(false)
+                setMenuOpen(false);
               }} // Close menu on link click for mobile
             >
               {link.name}
             </Link>
           ))}
           <div className="block lg:hidden md:hidden">
-          <ConnectWallet />
-        </div>
+            <ConnectWallet />
+          </div>
         </div>
 
         {/* Wallet Section */}

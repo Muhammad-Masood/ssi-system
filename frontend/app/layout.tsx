@@ -14,7 +14,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>ChainFusion</title>
+        <title>SSI KIT</title>
       </head>
       <body className="bg-gray-100 px-4">
         <Providers session={session}>

@@ -1,18 +1,12 @@
 import { Label } from "@radix-ui/react-label";
-import Authorization from "../components/Auth";
+import Login from "../components/Login";
+import { getSession } from "@/auth";
+import Logout from "../components/Logout";
+// import Authorization from "../components/Auth";
 
-const page = () => {
-  return (
-    <div className="p-[1rem]">
-      <div className="pb-[3rem] text-center">
-        <p className="lg:text-4xl text-3xl font-semibold pb-[0.5rem]">
-          Authorization
-        </p>
-        <p>Authorize or Revoke access of users to your credentials</p>
-      </div>
-      <Authorization />
-    </div>
-  );
+const page = async () => {
+  const session = await getSession();
+  return <div className="">{session ? <Logout /> : <Login />}</div>;
 };
 
 export default page;

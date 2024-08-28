@@ -16,7 +16,7 @@ import {
   where,
 } from "firebase/firestore";
 
-export const setupUserWallet = async () => {
+export const setupUserWallet = async (tab: string) => {
   const session = await getSession();
   if (session) {
     try {
@@ -29,6 +29,7 @@ export const setupUserWallet = async () => {
         await setDoc(userWalletDocRef, {
           address: newWallet.address,
           privateKey: newWallet.privateKey,
+          tab,
         });
       }
     } catch (error) {

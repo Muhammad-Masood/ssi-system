@@ -15,6 +15,7 @@ type Wallet = {
   provider: undefined | Provider;
   signer: undefined | ethers.Wallet;
   isConnected: boolean;
+  tab: string;
 };
 
 export const WalletContext = createContext({
@@ -22,6 +23,7 @@ export const WalletContext = createContext({
     provider: undefined as undefined | Provider,
     signer: undefined as undefined | ethers.Wallet,
     isConnected: false,
+    tab:"default",
   },
   setWallet: (wallet: Wallet) => {},
 });
@@ -35,6 +37,7 @@ export function WalletContextProvider({
     provider: undefined,
     signer: undefined,
     isConnected: false,
+    tab: "default"
   });
 
   return (

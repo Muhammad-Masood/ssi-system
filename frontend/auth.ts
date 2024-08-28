@@ -14,6 +14,9 @@ const authOptions: AuthOptions = {
   session: {
     strategy: "jwt",
   },
+  pages: {
+    signIn: "auth/login"
+  },
 };
 
 // const authOptions: NextAuthOptions = {
