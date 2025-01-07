@@ -8,28 +8,45 @@ import { WalletContext } from "@/providers/Providers";
 import { Label } from "@radix-ui/react-label";
 import { useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { contract } from "@/lib/contract";
 import { ethers } from "ethers";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { fetchUserDIDs } from "../server";
-import { Info } from "lucide-react";
+import { deleteUserDid, fetchUserDIDs } from "../server";
+import { DeleteIcon, Info, InfoIcon, TrashIcon } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { DIDDB } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 const Dids = () => {
   // const { identitySDK } = useContext(IdentityContext);
-  const [dids, setDids] = useState<{ did: string; token: string }[]>([]);
+  const [dids, setDids] = useState<DIDDB[]>([]);
   const { wallet } = useContext(WalletContext);
   const { isConnected, signer } = wallet;
   const [didName, setDidName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const router = useRouter();
 
   const generateDid = async () => {
     if (isConnected) {
@@ -54,14 +71,41 @@ const Dids = () => {
         // const tx = await signerContract.setResolvableDIDHash(ipfsHash);
         // console.log("Transaction Processed: ", tx);
         toast.success("DID created successfully!", token);
-      } catch (e) {
-        toast.error("Failed to create DID");
-        console.log(e);
+      } catch (e: AxiosError | any) {
+        const errorMessage = ((e as AxiosError).response!.data! as any).details;
+        toast.error(`Failed to create DID ${errorMessage}`);
+        console.log(errorMessage);
       } finally {
         setIsLoading(false);
       }
     } else {
       toast("Connect Wallet");
+    }
+  };
+
+  const deleteDID = async (
+    did: string,
+    token: string,
+    address: string,
+    privateKey: string
+  ) => {
+    try {
+      setDids((prev) =>
+        prev.map((item) =>
+          item.did === did ? { ...item, isDeleting: true } : item
+        )
+      );
+      const response = await deleteUserDid(did, token, address, privateKey);
+      toast.success(response);
+    } catch (e: any) {
+      toast.error(`Failed to delete DID: ${e.message}`);
+    } finally {
+      setDids((prev) =>
+        prev.map((item) =>
+          item.did === did ? { ...item, isDeleting: false } : item
+        )
+      );
+      router.refresh();
     }
   };
 
@@ -104,24 +148,57 @@ const Dids = () => {
         {dids.length > 0 ? (
           <ScrollArea className="h-[350px] rounded-md border p-4">
             {dids.map((did, index) => (
-              <Card key={index} className="flex justify-center items-center">
-                <CardContent className="py-2 px-3 h-auto">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild className="cursor-pointer">
-                        <p className="break-all font-mono">{did.did}</p>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        className="cursor-pointer"
-                        onClick={() => {
-                          navigator.clipboard.writeText(did.token);
-                          toast.success("DID token copied!");
-                        }}
-                      >
-                        <p>{did.token.substring(0, 20) + "...."}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+              <Card
+                key={index}
+                className={`flex justify-center items-center ${
+                  did.isDeleting ? "opacity-50 pointer-events-none" : ""
+                }`}
+              >
+                <CardContent className="py-2 px-3 h-auto flex space-x-3 items-center">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <InfoIcon size={20} />
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="cursor-pointer"
+                      onClick={() => {
+                        navigator.clipboard.writeText(did.token);
+                        toast.success("DID token copied!");
+                      }}
+                    >
+                      <p>{did.token.substring(0, 20) + "...."}</p>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="break-all font-mono">{did.did}</p>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <TrashIcon size={20} className="cursor-pointer" />
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Delete DID</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to delete this DID?
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <Button
+                          disabled={did.isDeleting}
+                          type="button"
+                          onClick={() =>
+                            deleteDID(
+                              did.did,
+                              did.token,
+                              signer!.address,
+                              signer!.privateKey
+                            )
+                          }
+                        >
+                          {did.isDeleting ? "Deleting" : "Delete"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   {showToken && <p>{did.token}</p>}
                 </CardContent>
                 {/* <div

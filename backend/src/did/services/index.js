@@ -17,7 +17,7 @@ import {
 } from "../../index.js";
 import crypto from "crypto";
 import { db } from "../../database/firebase.js";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 // import dock from "@docknetwork/sdk";
 // import { address, secretUri } from "./shared-constants";
 
@@ -88,6 +88,26 @@ const createDIDJWT = async (subject, privateKey, method) => {
   return { jwt, decodedDIDDocHash };
 };
 
+const deleteDIDJWT = async (did, didJwt, userAddress, privateKey) => {
+  try {
+    // Delete from contract
+    const signer_ethers = new ethers.Wallet(privateKey, provider);
+    const signerContract = contract.connect(signer_ethers);
+    const dids = await signerContract.retrieveResolvableDIDHash(userAddress);
+    const didIndex = dids.indexOf(did);
+    if (didIndex !== -1) {
+      const tx = await signerContract.removeResolvableDIDHash(didIndex);
+      console.log("DID Deletion Transaction Processed: ", tx);
+    }
+    // Delete from database
+    const docRef = doc(db, "dids",didJwt)
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error("Error deleting DID document:", error);
+    throw new Error(`Failed to delete DID: ${error.message}`);
+  }
+};
+
 /**
  * returns the decoded jwt
  * @param {string} jwt
@@ -138,4 +158,4 @@ const isDIDOnChainVerified = async (userDID, didJWT) => {
   return isVerified;
 };
 
-export { createDIDJWT, decodeDIDJWT, verifyDIDJwt, isDIDOnChainVerified };
+export { createDIDJWT, deleteDIDJWT, decodeDIDJWT, verifyDIDJwt, isDIDOnChainVerified };

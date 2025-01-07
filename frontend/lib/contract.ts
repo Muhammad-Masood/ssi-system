@@ -1,18 +1,51 @@
 import { ethers } from "ethers";
 
-export const contract_address = "0xEc33375bFB03a6Bc833f25c10F65af8EA67F5bC3";
+export const contract_address = "0x72aC284953133124DfaE3DB1C9AbF33267951fF6";
 export const contract_abi = [
   {
-    inputs: [{ internalType: "address", name: "publicKey", type: "address" }],
-    name: "retrieveResolvableDIDHash",
-    outputs: [{ internalType: "string[]", name: "", type: "string[]" }],
-    stateMutability: "view",
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "didHash",
+        type: "string",
+      },
+    ],
+    name: "DeletedDID",
+    type: "event",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint8",
+        name: "didIndex",
+        type: "uint8",
+      },
+    ],
+    name: "removeResolvableDIDHash",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
     inputs: [
-      { internalType: "address", name: "holder", type: "address" },
-      { internalType: "string", name: "hash", type: "string" },
+      {
+        internalType: "address",
+        name: "holder",
+        type: "address",
+      },
+      {
+        internalType: "string",
+        name: "hash",
+        type: "string",
+      },
     ],
     name: "setIssuedCertificateHash",
     outputs: [],
@@ -20,23 +53,72 @@ export const contract_abi = [
     type: "function",
   },
   {
-    inputs: [{ internalType: "string", name: "didHash", type: "string" }],
+    inputs: [
+      {
+        internalType: "string",
+        name: "didHash",
+        type: "string",
+      },
+    ],
     name: "setResolvableDIDHash",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
-    inputs: [{ internalType: "address", name: "issuer", type: "address" }],
-    name: "userToIssuedCertificates",
-    outputs: [{ internalType: "string[]", name: "", type: "string[]" }],
+    inputs: [
+      {
+        internalType: "address",
+        name: "publicKey",
+        type: "address",
+      },
+    ],
+    name: "retrieveResolvableDIDHash",
+    outputs: [
+      {
+        internalType: "string[]",
+        name: "",
+        type: "string[]",
+      },
+    ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [{ internalType: "address", name: "holder", type: "address" }],
+    inputs: [
+      {
+        internalType: "address",
+        name: "issuer",
+        type: "address",
+      },
+    ],
+    name: "userToIssuedCertificates",
+    outputs: [
+      {
+        internalType: "string[]",
+        name: "",
+        type: "string[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "holder",
+        type: "address",
+      },
+    ],
     name: "userToOwnedCertificates",
-    outputs: [{ internalType: "string[]", name: "", type: "string[]" }],
+    outputs: [
+      {
+        internalType: "string[]",
+        name: "",
+        type: "string[]",
+      },
+    ],
     stateMutability: "view",
     type: "function",
   },
@@ -46,6 +128,9 @@ export const test_contract_address = "";
 
 export const test_contract_abi = [];
 
-
 export const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-export const contract = new ethers.Contract(contract_address, contract_abi, provider);
+export const contract = new ethers.Contract(
+  contract_address,
+  contract_abi,
+  provider
+);

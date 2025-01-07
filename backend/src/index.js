@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import {
   createDIDJWT,
   decodeDIDJWT,
+  deleteDIDJWT,
   isDIDOnChainVerified,
   verifyDIDJwt,
 } from "./did/services/index.js";
@@ -88,6 +89,29 @@ app.post("/dids/create_did_jwt", async (req, res) => {
     return res
       .status(500)
       .json({ error: "Failed to create JWT", details: error.message });
+  }
+});
+
+app.post("/dids/delete_did_jwt", async (req, res) => {
+  const did = req.body.did;
+  const jwt = req.body.jwt;
+  const userAddress = req.body.userAddress;
+  const privateKey = req.headers["private-key"];
+  if (!jwt || !userAddress || !did || !privateKey) {
+    return res.status(400).json({ error: "Invalid request body." });
+  }
+  try {
+    await deleteDIDJWT(
+      did,
+      jwt,
+      userAddress,
+      privateKey
+    );
+    return res.status(200).json({message: "Successfully deleted DID document"});
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: "Failed to delete JWT", details: error.message });
   }
 });
 

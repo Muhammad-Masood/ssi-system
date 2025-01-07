@@ -10,11 +10,13 @@ import { getSessionServer, getUserWallet } from "../server";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 // import Wallet from ""
 export function ConnectWallet() {
   const { wallet, setWallet } = useContext(WalletContext);
   const { isConnected } = wallet;
   const [isConnecting, setIsConnecting] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<string | undefined>("");
 
   const handleConnect = async () => {
     try {
@@ -27,7 +29,8 @@ export function ConnectWallet() {
         const walletDoc = await getDoc(userWalletDocRef);
         const walletData = walletDoc.data()! as any;
         const provider = new ethers.JsonRpcProvider(
-          process.env.RPC_URL as string
+          // process.env.NEXT_PUBLIC_RPC_URL as string
+          "https://bsc-testnet.nodereal.io/v1/54ee4dc00e384bbc8c8a75d42287f585"
         );
         const wallet = new ethers.Wallet(walletData.privateKey, provider);
         console.log(walletData.tab);
@@ -38,6 +41,11 @@ export function ConnectWallet() {
           tab: walletData.tab,
         });
         setIsConnecting(false);
+        const walletBalance = await provider.getBalance(wallet.address);
+        console.log(walletBalance);
+        setWalletBalance(
+          String(Number(ethers.formatEther(walletBalance)).toFixed(2))
+        );
       } else {
         toast.error("Login to your account.");
       }
@@ -51,17 +59,42 @@ export function ConnectWallet() {
   // }, []);
 
   return (
-    <div className="flex lg:flex-row md:flex-row flex-col space-y-3 lg:space-y-0 md:space-y-0 items-center justify-center">
-      <Button onClick={handleConnect} disabled={isConnecting}>
+    <div className="flex lg:flex-row items-center justify-center lg:space-x-6 space-y-4 lg:space-y-0">
+      <Button
+        onClick={handleConnect}
+        disabled={isConnecting}
+        className={`px-6 py-2 rounded-md shadow-md ${
+          isConnecting ? "opacity-75 cursor-not-allowed" : ""
+        }`}
+      >
         {isConnected
-          ? "Connected"
+          ? "✅ Connected"
           : isConnecting
-          ? "Connecting..."
-          : "Connect Wallet"}
+          ? "🔄 Connecting..."
+          : "💳 Connect Wallet"}
       </Button>
-      {wallet.signer ? (
-        <Badge className="ml-2 py-2">{wallet.signer.address}</Badge>
-      ) : null}
+
+      <div>
+        {wallet.signer && (
+          <div className="flex items-center lg:items-start bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-lg">
+            <div className="flex items-center mt-1">
+              <Link
+                href={`https://testnet.bscscan.com/address/${wallet.signer.address}`}
+                target="_blank"
+                className="text-sm font-medium truncate w-64 ml-2 cursor-pointer"
+              >
+                <p>{wallet.signer.address}</p>
+              </Link>
+            </div>
+
+            <div className="flex items-center mt-1">
+              <p className="text-sm font-medium ml-2">
+                {walletBalance ? `${walletBalance} BNB` : "..."}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

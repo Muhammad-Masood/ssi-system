@@ -72,6 +72,7 @@ export const verifierNavbarLinks: NavbarLink[] = [
 export type DIDDB = {
   did: string;
   token: string;
+  isDeleting: boolean;
 };
 
 export type CredentialDB = {

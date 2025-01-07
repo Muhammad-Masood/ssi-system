@@ -7,8 +7,16 @@ contract SSI {
     mapping(address key => string[] cidHash) private addressToIssuedCIDs;
     mapping(address key => string[] cidHash) private addressToOwnedCIDs;
 
+    event DeletedDID(address user, string didHash);
+
     function setResolvableDIDHash(string memory didHash) external {
         addressToDIDs[msg.sender].push(didHash);
+    }
+
+    function removeResolvableDIDHash(uint8 didIndex) external {
+        string memory deletedDIDHash = addressToDIDs[msg.sender][didIndex];
+        delete addressToDIDs[msg.sender][didIndex];
+        emit DeletedDID(msg.sender, deletedDIDHash);
     }
 
     function setIssuedCertificateHash(address holder, string memory hash) external {

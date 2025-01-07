@@ -14,6 +14,7 @@ import {
   query,
   setDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 
 export const setupUserWallet = async (tab: string) => {
@@ -73,9 +74,36 @@ export const fetchUserDIDs = async (address: string) => {
   let dids: DIDDB[] = [];
   docs.forEach((doc) => {
     const data = doc.data();
-    dids.push({ did: data.did, token: doc.id });
+    dids.push({ did: data.did, token: doc.id, isDeleting: false});
   });
   return dids;
+};
+
+export const deleteUserDid = async (
+  did: string,
+  jwt: string,
+  userAddress: string,
+  privateKey: string
+) => {
+  try {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/dids/delete_did_jwt`,
+      {
+        did,
+        jwt,
+        userAddress,
+        privateKey,
+      },
+      {
+        headers: {
+          "private-key": privateKey,
+        },
+      }
+    );
+    return response.data.message;
+  } catch (error) {
+    return String(error);
+  }
 };
 
 export const createCredential = async (
