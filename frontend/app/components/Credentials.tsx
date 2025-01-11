@@ -26,28 +26,23 @@ const Credentials = () => {
     []
   );
   const { wallet } = useContext(WalletContext);
-  const { isConnected } = wallet;
+  const { isConnected, signer } = wallet;
   useEffect(() => {
     async function fetchCredentials() {
       try {
-        const signer = wallet.signer!;
-        const address: string = signer.address;
-        const issuedCIDs = await getUserIssuedCertificatesHashes(
-          signer.privateKey,
-          address
-        );
-        const ownedCIDs = await getUserOwnedCertificatesHashes(
-          signer.privateKey,
-          address
-        );
+        const address: string = signer!.address;
+        console.log(address)
+        const issuedCIDs = await getUserIssuedCertificatesHashes(address);
+        const ownedCIDs = await getUserOwnedCertificatesHashes(address);
+        console.log("cids: ", issuedCIDs, ownedCIDs);
         setIssuedCredentialsCids(issuedCIDs);
         setOwnedCredentialsCids(ownedCIDs);
-        console.log(issuedCIDs, ownedCIDs);
       } catch (error) {
         console.log(error);
       }
     }
     if (isConnected) {
+      console.log("Calling fetch credentials");
       fetchCredentials();
     }
   }, [wallet]);

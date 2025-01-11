@@ -163,12 +163,12 @@ export const uploadFileIPFS = async (file: any) => {
 };
 
 export const getUserIssuedCertificatesHashes = async (
-  privateKey: string,
   issuer: string
 ) => {
   const encryptedCIDs: string[] = await contract.userToIssuedCertificates(
     issuer
   );
+  console.log("encryptedCIDs from web server -> ", encryptedCIDs);
   if (encryptedCIDs.length === 0) return [];
   const response = await axios.get(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/decryptCID`,
@@ -182,7 +182,6 @@ export const getUserIssuedCertificatesHashes = async (
 };
 
 export const getUserOwnedCertificatesHashes = async (
-  privateKey: string,
   user: string
 ) => {
   const encryptedCIDs: string[] = await contract.userToOwnedCertificates(user);

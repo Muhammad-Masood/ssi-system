@@ -71,6 +71,7 @@ const Dids = () => {
         // const tx = await signerContract.setResolvableDIDHash(ipfsHash);
         // console.log("Transaction Processed: ", tx);
         toast.success("DID created successfully!", token);
+        router.refresh();
       } catch (e: AxiosError | any) {
         const errorMessage = ((e as AxiosError).response!.data! as any).details;
         toast.error(`Failed to create DID ${errorMessage}`);
