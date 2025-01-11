@@ -77,6 +77,7 @@ const Dids = () => {
         console.log(errorMessage);
       } finally {
         setIsLoading(false);
+        router.refresh();
       }
     } else {
       toast("Connect Wallet");
@@ -112,7 +113,7 @@ const Dids = () => {
   useEffect(() => {
     async function fetchDIDs() {
       const dids = await fetchUserDIDs(signer!.address);
-      console.log(dids);
+      console.log("user_dids: ",dids);
       setDids(dids);
     }
     if (isConnected) {
