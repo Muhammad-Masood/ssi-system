@@ -254,9 +254,8 @@ app.get("/vc/verify_vp", async (req, res) => {
 });
 
 app.get("/vc/decryptCID", async (req, res) => {
-  // const privateKey = req.headers["private-key"];
   const encryptedCIDs = req.headers["encrypted-cids"];
-  const formattedEncryptedCIDs = [encryptedCIDs];
+  const formattedEncryptedCIDs = encryptedCIDs.split(",")
   if (formattedEncryptedCIDs.length === 0) {
     return res.status(400).json({ error: "Invalid request body." });
   }

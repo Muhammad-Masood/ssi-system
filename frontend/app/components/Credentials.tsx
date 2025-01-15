@@ -54,7 +54,7 @@ const Credentials = () => {
         <ScrollArea className="h-[350px] rounded-md border p-4">
           {issuedCredentialsCids.length > 0 ? (
             issuedCredentialsCids.map((ic_cid: string, i: number) => (
-              <Card className="cursor-pointer">
+              <Card className="cursor-pointer mb-2">
                 <CardContent className="py-3 h-auto">
                   <Link
                     href={`${process.env.NEXT_PUBLIC_PINATA_IPFS_GATEWAY}/${ic_cid}`}
