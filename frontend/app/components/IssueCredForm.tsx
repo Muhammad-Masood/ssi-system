@@ -81,6 +81,7 @@ const IssueCredForm = () => {
         toast.dismiss(loadingId);
         toast.success(`Credential stored successfully`);
       } catch (error) {
+        console.log(String(error));
         toast.error("Failed to store credential");
         // setIsLoading(false);
       } finally {

@@ -74,25 +74,30 @@ export const fetchUserDIDs = async (address: string) => {
   let dids: DIDDB[] = [];
   docs.forEach((doc) => {
     const data = doc.data();
-    dids.push({ did: data.did, token: doc.id, isDeleting: false});
+    dids.push({
+      did: data.did,
+      token: doc.id,
+      ipfsHash: data.ipfsHash,
+      isDeleting: false,
+    });
   });
   return dids;
 };
 
 export const deleteUserDid = async (
-  did: string,
   jwt: string,
   userAddress: string,
-  privateKey: string
+  privateKey: string,
+  hash: string
 ) => {
   try {
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/dids/delete_did_jwt`,
       {
-        did,
         jwt,
         userAddress,
         privateKey,
+        hash,
       },
       {
         headers: {
@@ -141,6 +146,15 @@ export const createCredential = async (
   }
 };
 
+export const getRevokedCIDs = async (issuerAddress: string) => {
+  const response = await axios.get(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/issuer_revoked_cids?issuerAddress=${issuerAddress}`
+  );
+  const revokedCids: string[] = response.data.cids;
+  console.log(revokedCids);
+  return revokedCids;
+};
+
 export const uploadFileIPFS = async (file: any) => {
   try {
     const pinataEndpoint =
@@ -162,9 +176,7 @@ export const uploadFileIPFS = async (file: any) => {
   }
 };
 
-export const getUserIssuedCertificatesHashes = async (
-  issuer: string
-) => {
+export const getUserIssuedCertificatesHashes = async (issuer: string) => {
   const encryptedCIDs: string[] = await contract.userToIssuedCertificates(
     issuer
   );
@@ -181,9 +193,7 @@ export const getUserIssuedCertificatesHashes = async (
   return response.data.decryptedCIDs;
 };
 
-export const getUserOwnedCertificatesHashes = async (
-  user: string
-) => {
+export const getUserOwnedCertificatesHashes = async (user: string) => {
   const encryptedCIDs: string[] = await contract.userToOwnedCertificates(user);
   if (encryptedCIDs.length === 0) return [];
   const response = await axios.get(

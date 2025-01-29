@@ -12,10 +12,12 @@ import { ethers } from "ethers";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import {
+  bytesHexToString,
   contract,
   pinataIPFSGateway,
   provider,
   storeDataOnIPFS,
+  stringToBytesHex,
 } from "../../index.js";
 import CryptoJS from "crypto-js";
 import axios from "axios";
@@ -54,13 +56,14 @@ const createVerifiableCredential = async (
   console.log("Credential stored on IPFS with -> ", cid);
   const encryptedCID = encryptCIDHash(cid);
   console.log("Encrypted CID -> ", encryptedCID);
+  const encryptedCIDBytes = stringToBytesHex(encryptedCID);
   const holderDID = vcPayload.sub;
   const holderAddress = holderDID.split(":")[2];
   const signer = new ethers.Wallet(issuerPrivateKey, provider);
   const signer_contract = contract.connect(signer);
   const tx = await signer_contract.setIssuedCertificateHash(
     holderAddress,
-    encryptedCID
+    encryptedCIDBytes
   );
   console.log("Transaction Processed: ", tx);
   return vcJwt;
@@ -102,7 +105,8 @@ const isCertificateOnChainVerified = async (
   let isVerified = false;
   await Promise.all(
     matchingCertificates.map(async (m_encCID) => {
-      const mCID = decryptCIDHash(m_encCID);
+      const m_encCIDBytes = bytesHexToString(m_encCID);
+      const mCID = decryptCIDHash(m_encCIDBytes);
       console.log("decrypted CID -> ", mCID);
       if (mCID) {
         // const response = await axios.get(`https://ipfs.io/ipfs/${mCID}`);
@@ -212,18 +216,46 @@ const decryptCIDHash = (encryptedCID) => {
   // const secret_nonce = "ec79eb3e97d08c7e5a4bc3959cbd0d3d"
   const key = Buffer.from(process.env.SECRET_KEY, "hex");
   const nonce = Buffer.from(process.env.SECRET_NONCE, "hex");
-  const buffer = Buffer.from(encryptedCID, 'base64');
+  const buffer = Buffer.from(encryptedCID, "base64");
   const encryptedText = buffer.slice(0, -16); // All but the last 16 bytes
   const tag = buffer.slice(-16); // Last 16 bytes is the tag
-  
+
   const decipher = crypto.createDecipheriv("aes-128-gcm", key, nonce);
   decipher.setAuthTag(tag); // Set the authentication tag
   const decrypted = Buffer.concat([
     decipher.update(encryptedText),
-    decipher.final()
+    decipher.final(),
   ]);
 
-  return decrypted.toString('utf8');
+  return decrypted.toString("utf8");
+};
+
+const revokeCIDHash = async (issuerPrivateKey, cidHash) => {
+  // encrypt hash
+  const encryptedCID = encryptCIDHash(cidHash);
+  const encryptedCIDBytes = stringToBytesHex(encryptedCID);
+  console.log(encryptedCIDBytes);
+  const signer = new ethers.Wallet(issuerPrivateKey, provider);
+  const signer_contract = contract.connect(signer);
+  const tx = await signer_contract.revokeCertificate(encryptedCIDBytes);
+  console.log("Transaction Processed: ", tx);
+};
+
+// Check if the provided CID has been revoked
+// Encrypts the CID ipfs hash and convert into bytes to pass into the contract call
+const getRevokedCIDs = async (issuerAddress) => {
+  const provider_contract = contract.connect(provider);
+  const issuerRevokedCids = await provider_contract.addressToRevokedCIDS(
+    issuerAddress
+  ); // bytes[]
+  const issuerRevokedCidsStr = issuerRevokedCids.map((cid) =>
+    bytesHexToString(cid)
+  ); // string[] encrypted
+  const issuerRevokedCidsStrDecryp = issuerRevokedCidsStr.map((cid) =>
+    decryptCIDHash(cid)
+  );
+  console.log("decryp -> ", issuerRevokedCidsStrDecryp);
+  return issuerRevokedCidsStrDecryp;
 };
 
 export {
@@ -234,4 +266,6 @@ export {
   isCertificateOnChainVerified,
   decryptCIDHash,
   encryptCIDHash,
+  revokeCIDHash,
+  getRevokedCIDs,
 };

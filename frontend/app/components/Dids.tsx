@@ -14,7 +14,15 @@ import { ethers } from "ethers";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { deleteUserDid, fetchUserDIDs } from "../server";
-import { DeleteIcon, Info, InfoIcon, TrashIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CopyIcon,
+  DeleteIcon,
+  Info,
+  InfoIcon,
+  Trash2Icon,
+  TrashIcon,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -46,6 +54,7 @@ const Dids = () => {
   const [didName, setDidName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [copiedToken, setCopiedToken] = useState("");
   const router = useRouter();
 
   const generateDid = async () => {
@@ -66,10 +75,8 @@ const Dids = () => {
           }
         );
         console.log(response.data);
-        const { token, ipfsHash } = response.data;
-        // const signerContract = contract.connect(signer) as any;
-        // const tx = await signerContract.setResolvableDIDHash(ipfsHash);
-        // console.log("Transaction Processed: ", tx);
+        const { token, ipfsHash, did } = response.data;
+        setDids((prev) => [...prev, did]);
         toast.success("DID created successfully!", token);
         router.refresh();
       } catch (e: AxiosError | any) {
@@ -85,20 +92,19 @@ const Dids = () => {
     }
   };
 
-  const deleteDID = async (
-    did: string,
-    token: string,
-    address: string,
-    privateKey: string
-  ) => {
+  const deleteDID = async (did: string, token: string, hash: string) => {
     try {
+      const address: string = wallet.signer!.address;
+      const privateKey: string = wallet.signer!.privateKey;
       setDids((prev) =>
         prev.map((item) =>
           item.did === did ? { ...item, isDeleting: true } : item
         )
       );
-      const response = await deleteUserDid(did, token, address, privateKey);
+      const response = await deleteUserDid(token, address, privateKey, hash);
       toast.success(response);
+      setDids((prev) => prev.filter((item) => item.did !== did));
+      router.refresh();
     } catch (e: any) {
       toast.error(`Failed to delete DID: ${e.message}`);
     } finally {
@@ -111,10 +117,16 @@ const Dids = () => {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedToken(text);
+    setTimeout(() => setCopiedToken(""), 3000);
+  };
+
   useEffect(() => {
     async function fetchDIDs() {
       const dids = await fetchUserDIDs(signer!.address);
-      console.log("user_dids: ",dids);
+      console.log("user_dids: ", dids);
       setDids(dids);
     }
     if (isConnected) {
@@ -123,101 +135,101 @@ const Dids = () => {
   }, [wallet]);
 
   return (
-    <div className="space-y-12">
-      <div className="space-y-3">
-        <p className="pb-4 text-2xl font-medium">
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <h3 className="text-xl font-medium">
           Create Your Decentralized Identifier
-        </p>
-        <Label className="pb-1">Subject</Label>
-        <Input
-          placeholder="i.e. oslow_hospital"
-          value={didName}
-          onChange={(e) => setDidName(e.target.value)}
-          className=""
-        />
-        <div>
-          <Label className="pb-1">Method</Label>
-          <Input value={"did:ethr"} disabled />
+        </h3>
+        <div className="space-y-2">
+          <Label htmlFor="subject">Subject</Label>
+          <Input
+            id="subject"
+            placeholder="i.e. oslow_hospital"
+            value={didName}
+            onChange={(e) => setDidName(e.target.value.replace(/\s+/g, "_"))}
+          />
         </div>
-        <div className="pt-2">
-          <Button onClick={generateDid} className="" disabled={isLoading}>
-            {isLoading ? "Generating..." : "Generate DID"}
-          </Button>
+        <div className="space-y-2">
+          <Label htmlFor="method">Method</Label>
+          <Input id="method" value="did:ethr" disabled />
         </div>
+        <Button onClick={generateDid} disabled={isLoading}>
+          {isLoading ? "Generating..." : "Generate DID"}
+        </Button>
       </div>
-      <div className="gap-4">
-        <p className="pb-4 text-2xl font-medium">Your DIDs</p>
+
+      <div className="space-y-4">
+        <h3 className="text-xl font-medium">Your DIDs</h3>
         {dids.length > 0 ? (
-          <ScrollArea className="h-[350px] rounded-md border p-4">
-            {dids.map((did, index) => (
-              <Card
-                key={index}
-                className={`flex justify-center items-center ${
-                  did.isDeleting ? "opacity-50 pointer-events-none" : ""
-                }`}
-              >
-                <CardContent className="py-2 px-3 h-auto flex space-x-3 items-center">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <InfoIcon size={20} />
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="cursor-pointer"
-                      onClick={() => {
-                        navigator.clipboard.writeText(did.token);
-                        toast.success("DID token copied!");
-                      }}
-                    >
-                      <p>{did.token.substring(0, 20) + "...."}</p>
-                    </PopoverContent>
-                  </Popover>
-                  <p className="break-all font-mono">{did.did}</p>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <TrashIcon size={20} className="cursor-pointer" />
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Delete DID</DialogTitle>
-                        <DialogDescription>
-                          Are you sure you want to delete this DID?
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter>
-                        <Button
-                          disabled={did.isDeleting}
-                          type="button"
-                          onClick={() =>
-                            deleteDID(
-                              did.did,
-                              did.token,
-                              signer!.address,
-                              signer!.privateKey
-                            )
-                          }
-                        >
-                          {did.isDeleting ? "Deleting" : "Delete"}
+          <ScrollArea className="h-[400px] rounded-md border p-4">
+            <div className="space-y-4">
+              {dids.map((did, index) => (
+                <Card key={index} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="icon">
+                            <InfoIcon className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold">DID Token</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(did.token)}
+                            >
+                              {copiedToken === did.token ? (
+                                <CheckIcon className="h-4 w-4" />
+                              ) : (
+                                <CopyIcon className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                          <p className="mt-2 break-all font-mono text-sm">
+                            {did.token}
+                          </p>
+                        </PopoverContent>
+                      </Popover>
+                      <p className="break-all font-mono text-sm pr-3">
+                        {did.did}
+                      </p>
+                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="destructive" size="icon">
+                          <Trash2Icon className="h-4 w-4" />
                         </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                  {showToken && <p>{did.token}</p>}
-                </CardContent>
-                {/* <div
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
-                  onClick={handleClick}
-                  style={{ cursor: "pointer" }}
-                >
-                  <Info />
-                </div> */}
-              </Card>
-            ))}
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Delete DID</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to delete this DID?
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button
+                            disabled={did.isDeleting}
+                            variant="destructive"
+                            onClick={() =>
+                              deleteDID(did.did, did.token, did.ipfsHash)
+                            }
+                          >
+                            Delete
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </ScrollArea>
         ) : (
-          <p className="text-2xl font-medium opacity-45 self-center">
-            No DID Found
-          </p>
+          <p className="text-lg text-gray-500 italic">No DIDs found</p>
         )}
       </div>
     </div>

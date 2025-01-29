@@ -73,6 +73,7 @@ export type DIDDB = {
   did: string;
   token: string;
   isDeleting: boolean;
+  ipfsHash: string;
 };
 
 export type CredentialDB = {

@@ -1,5 +1,49 @@
-export const contract_address = "0x5d936440F9DC6ecDAd25Ae7B4698FbB237Da3850";
+export const contract_address = "0x130ea8f6DA825Be6B3412e9E5e62316502A09056";
 export const contract_abi = [
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "issuer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "holder",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "bytes",
+        name: "cidHash",
+        type: "bytes",
+      },
+    ],
+    name: "CIDIssued",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "issuer",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "bytes",
+        name: "cidHash",
+        type: "bytes",
+      },
+    ],
+    name: "CIDRevoked",
+    type: "event",
+  },
   {
     anonymous: false,
     inputs: [
@@ -10,10 +54,10 @@ export const contract_abi = [
         type: "address",
       },
       {
-        indexed: false,
-        internalType: "string",
+        indexed: true,
+        internalType: "bytes",
         name: "didHash",
-        type: "string",
+        type: "bytes",
       },
     ],
     name: "DeletedDID",
@@ -35,14 +79,27 @@ export const contract_abi = [
   {
     inputs: [
       {
+        internalType: "bytes",
+        name: "cidHash",
+        type: "bytes",
+      },
+    ],
+    name: "revokeCertificate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "address",
         name: "holder",
         type: "address",
       },
       {
-        internalType: "string",
+        internalType: "bytes",
         name: "hash",
-        type: "string",
+        type: "bytes",
       },
     ],
     name: "setIssuedCertificateHash",
@@ -53,14 +110,33 @@ export const contract_abi = [
   {
     inputs: [
       {
-        internalType: "string",
+        internalType: "bytes",
         name: "didHash",
-        type: "string",
+        type: "bytes",
       },
     ],
     name: "setResolvableDIDHash",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "issuer",
+        type: "address",
+      },
+    ],
+    name: "addressToRevokedCIDS",
+    outputs: [
+      {
+        internalType: "bytes[]",
+        name: "",
+        type: "bytes[]",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -74,9 +150,9 @@ export const contract_abi = [
     name: "retrieveResolvableDIDHash",
     outputs: [
       {
-        internalType: "string[]",
+        internalType: "bytes[]",
         name: "",
-        type: "string[]",
+        type: "bytes[]",
       },
     ],
     stateMutability: "view",
@@ -93,9 +169,9 @@ export const contract_abi = [
     name: "userToIssuedCertificates",
     outputs: [
       {
-        internalType: "string[]",
+        internalType: "bytes[]",
         name: "",
-        type: "string[]",
+        type: "bytes[]",
       },
     ],
     stateMutability: "view",
@@ -112,16 +188,15 @@ export const contract_abi = [
     name: "userToOwnedCertificates",
     outputs: [
       {
-        internalType: "string[]",
+        internalType: "bytes[]",
         name: "",
-        type: "string[]",
+        type: "bytes[]",
       },
     ],
     stateMutability: "view",
     type: "function",
   },
 ];
-
 export const test_contract_address = "";
 
 export const test_contract_abi = [];

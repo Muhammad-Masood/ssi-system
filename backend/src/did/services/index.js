@@ -10,10 +10,12 @@ import { Resolver } from "did-resolver";
 import { getResolver } from "ethr-did-resolver";
 import axios from "axios";
 import {
+  bytesHexToString,
   contract,
   pinataIPFSGateway,
   provider,
   storeDataOnIPFS,
+  stringToBytesHex,
 } from "../../index.js";
 import crypto from "crypto";
 import { db } from "../../database/firebase.js";
@@ -26,9 +28,9 @@ import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
  * @param {string} privateKey
  * @param {"did:ethr" | "did:key"} method
  */
-const generateDID = (address, method) => {
+const generateDID = (address, method, subject) => {
   if (method === "did:ethr") {
-    return `did:ethr:${address}`;
+    return `did:ethr:${subject}:${address}`;
   } else if (method === "did:key") {
     return ``;
   }
@@ -46,7 +48,7 @@ const createDIDJWT = async (subject, privateKey, method) => {
   const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 5; // days
   const signer_ethers = new ethers.Wallet(privateKey, provider);
   const address = signer_ethers.address;
-  const did = generateDID(address, method);
+  const did = generateDID(address, method, subject);
   console.log(did);
   const jwt = await createJWT(
     {
@@ -69,8 +71,9 @@ const createDIDJWT = async (subject, privateKey, method) => {
   const decodedDIDDocHash = await storeDataOnIPFS(decodedDIDDocJson);
   console.log("Decoded DID document stored on IPFS with ->", decodedDIDDocHash);
   // store on the blockchain
+  const decodedDIDDocHashBytes = stringToBytesHex(decodedDIDDocHash); //0x123456
   const signerContract = contract.connect(signer_ethers);
-  const tx = await signerContract.setResolvableDIDHash(decodedDIDDocHash);
+  const tx = await signerContract.setResolvableDIDHash(decodedDIDDocHashBytes);
   console.log("Transaction Processed: ", tx);
 
   // store on the database
@@ -85,23 +88,27 @@ const createDIDJWT = async (subject, privateKey, method) => {
   } catch (err) {
     console.log(err);
   }
-  return { jwt, decodedDIDDocHash };
+  return { jwt, decodedDIDDocHash, did };
 };
 
-const deleteDIDJWT = async (did, didJwt, userAddress, privateKey) => {
+const deleteDIDJWT = async (didJwt, userAddress, privateKey, ipfsHash) => {
   try {
+    const didBytes = stringToBytesHex(ipfsHash);
+    console.log("didBytes -> ", didBytes);
     // Delete from contract
     const signer_ethers = new ethers.Wallet(privateKey, provider);
     const signerContract = contract.connect(signer_ethers);
     const dids = await signerContract.retrieveResolvableDIDHash(userAddress);
-    const didIndex = dids.indexOf(did);
+    const didIndex = dids.indexOf(didBytes);
     if (didIndex !== -1) {
       const tx = await signerContract.removeResolvableDIDHash(didIndex);
       console.log("DID Deletion Transaction Processed: ", tx);
+      // Delete from database
+      const docRef = doc(db, "dids", didJwt);
+      await deleteDoc(docRef);
+    } else {
+      throw new Error(`Failed to delete DID: not found`);
     }
-    // Delete from database
-    const docRef = doc(db, "dids",didJwt)
-    await deleteDoc(docRef);
   } catch (error) {
     console.error("Error deleting DID document:", error);
     throw new Error(`Failed to delete DID: ${error.message}`);
@@ -134,12 +141,13 @@ const verifyDIDJwt = async (jwt) => {
 
 const isDIDOnChainVerified = async (userDID, didJWT) => {
   // on-chain verification
-  const user_address = userDID.split(":")[2];
+  const user_address = userDID.split(":")[3];
   console.log("User address -> ", user_address);
   const provider_contract = contract.connect(provider);
-  const userDIDs = await provider_contract.retrieveResolvableDIDHash(
+  const userDIDsBytes = await provider_contract.retrieveResolvableDIDHash(
     user_address
-  );
+  ); // bytes[]
+  const userDIDs = userDIDsBytes.map((udid) => bytesHexToString(udid));
   console.log(userDIDs);
   let isVerified = false;
   await Promise.all(
@@ -158,4 +166,10 @@ const isDIDOnChainVerified = async (userDID, didJWT) => {
   return isVerified;
 };
 
-export { createDIDJWT, deleteDIDJWT, decodeDIDJWT, verifyDIDJwt, isDIDOnChainVerified };
+export {
+  createDIDJWT,
+  deleteDIDJWT,
+  decodeDIDJWT,
+  verifyDIDJwt,
+  isDIDOnChainVerified,
+};

@@ -15,6 +15,8 @@ import {
   isCertificateOnChainVerified,
   verifyCredentialJWT,
   verifyCredentialPresentation,
+  getRevokedCIDs,
+  revokeCIDHash,
 } from "./credential/services/index.js";
 import axios from "axios";
 import crypto from "crypto";
@@ -31,6 +33,14 @@ app.use(cors());
 const pinataGateway = "https://api.pinata.cloud";
 export const pinataIPFSGateway =
   "https://pink-gentle-krill-627.mypinata.cloud/ipfs";
+
+export const stringToBytesHex = (str) => {
+  return "0x" + Buffer.from(str, "utf-8").toString("hex");
+};
+
+export const bytesHexToString = (bytesHex) => {
+  return Buffer.from(bytesHex.slice(2), "hex").toString("utf-8");
+};
 
 //////////////////////////////////////
 //////////// Smart Contract /////////
@@ -79,12 +89,14 @@ app.post("/dids/create_did_jwt", async (req, res) => {
     return res.status(400).json({ error: "Invalid request body." });
   }
   try {
-    const { jwt, decodedDIDDocHash } = await createDIDJWT(
+    const { jwt, decodedDIDDocHash, did } = await createDIDJWT(
       subject,
       privateKey,
       method
     );
-    return res.status(200).json({ token: jwt, ipfsHash: decodedDIDDocHash });
+    return res
+      .status(200)
+      .json({ token: jwt, ipfsHash: decodedDIDDocHash, did: did });
   } catch (error) {
     return res
       .status(500)
@@ -93,21 +105,18 @@ app.post("/dids/create_did_jwt", async (req, res) => {
 });
 
 app.post("/dids/delete_did_jwt", async (req, res) => {
-  const did = req.body.did;
   const jwt = req.body.jwt;
   const userAddress = req.body.userAddress;
+  const ipfsHash = req.body.hash;
   const privateKey = req.headers["private-key"];
-  if (!jwt || !userAddress || !did || !privateKey) {
+  if (!jwt || !userAddress || !privateKey || !ipfsHash) {
     return res.status(400).json({ error: "Invalid request body." });
   }
   try {
-    await deleteDIDJWT(
-      did,
-      jwt,
-      userAddress,
-      privateKey
-    );
-    return res.status(200).json({message: "Successfully deleted DID document"});
+    await deleteDIDJWT(jwt, userAddress, privateKey, ipfsHash);
+    return res
+      .status(200)
+      .json({ message: "Successfully deleted DID document" });
   } catch (error) {
     return res
       .status(500)
@@ -175,7 +184,7 @@ app.post("/vc/create_vc", async (req, res) => {
   }
 
   const vcPayload = {
-    sub: holderDID,
+    sub: `did:ethr:${holderDID.split(":")[3]}`,
     vc: {
       "@context": ["https://www.w3.org/2018/credentials/v1"],
       type: ["VerifiableCredential"],
@@ -190,7 +199,8 @@ app.post("/vc/create_vc", async (req, res) => {
   };
   const vcJwt = await createVerifiableCredential(
     vcPayload,
-    issuerDID,
+    // issuerDID,
+    `did:ethr:${issuerDID.split(":")[3]}`,
     issuerPrivateKey
   );
   console.log("vc_token -> ", vcJwt);
@@ -209,6 +219,24 @@ app.post("/vc/create_vc", async (req, res) => {
   return res
     .status(200)
     .json({ verifiable_credential: vcJwt, verifiable_presentation: vpJwt });
+});
+
+app.post("/vc/revoke_vc", async (req, res) => {
+  const cidHash = req.body.cidHash;
+  const issuerPrivateKey = req.headers["private-key"];
+  console.log("privKey: ", issuerPrivateKey);
+  if (!issuerPrivateKey || !cidHash) {
+    return res.status(400).json({ error: "Invalid request body." });
+  }
+
+  try {
+    await revokeCIDHash(issuerPrivateKey, cidHash);
+    return res
+      .status(200)
+      .json({ message: "Credential revoked!", cid: cidHash });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/vc/verify_vc", async (req, res) => {
@@ -240,6 +268,19 @@ app.get("/vc/verify_vc", async (req, res) => {
   }
 });
 
+app.get("/vc/issuer_revoked_cids", async (req, res) => {
+  const issuerAddress = req.query.issuerAddress;
+  if (!issuerAddress) {
+    return res.status(400).json({ error: "issuerAddress not found." });
+  }
+  try {
+    const issuerRevokedCids = await getRevokedCIDs(issuerAddress);
+    return res.status(200).json({ cids: issuerRevokedCids });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/vc/verify_vp", async (req, res) => {
   const vpJwt = req.headers["vp-jwt"];
   if (!vpJwt) {
@@ -255,15 +296,22 @@ app.get("/vc/verify_vp", async (req, res) => {
 
 app.get("/vc/decryptCID", async (req, res) => {
   const encryptedCIDs = req.headers["encrypted-cids"];
-  const formattedEncryptedCIDs = encryptedCIDs.split(",")
+  console.log("encryp", encryptedCIDs);
+  const formattedEncryptedCIDs = encryptedCIDs
+    .split(",")
+    .map((ecid) => ecid.trim());
   if (formattedEncryptedCIDs.length === 0) {
     return res.status(400).json({ error: "Invalid request body." });
   }
   console.log("formatted -> ", formattedEncryptedCIDs);
-  const decryptedCIDs = formattedEncryptedCIDs.map((ecid) =>
+  // convert bytes into string
+  const formattedEncryptedCIDsString = formattedEncryptedCIDs.map((ecid) =>
+    bytesHexToString(ecid)
+  );
+  const decryptedCIDs = formattedEncryptedCIDsString.map((ecid) =>
     decryptCIDHash(ecid)
   );
-  console.log(decryptedCIDs);
+  console.log(formattedEncryptedCIDsString);
   return res.status(200).json({ decryptedCIDs });
 });
 
