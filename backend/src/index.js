@@ -24,6 +24,15 @@ import { ethers } from "ethers";
 import { contract_abi, contract_address } from "./contract.js";
 import cors from "cors";
 import dotenv from "dotenv";
+import {
+  collection,
+  doc,
+  getDoc,
+  query,
+  setDoc,
+  where,
+} from "firebase/firestore";
+import { db } from "./database/firebase.js";
 dotenv.config();
 
 const app = express();
@@ -171,6 +180,7 @@ app.post("/vc/create_vc", async (req, res) => {
   const issuerDID = req.body.issuer_did;
   const holderDID = req.body.holder_did;
   const documentHash = req.body.ipfsHash;
+  const userAddress = req.body.userAddress;
   const issuerPrivateKey = req.headers["private-key"];
 
   if (
@@ -197,7 +207,7 @@ app.post("/vc/create_vc", async (req, res) => {
       },
     },
   };
-  const vcJwt = await createVerifiableCredential(
+  const { vcJwt, encryptedCIDBytes } = await createVerifiableCredential(
     vcPayload,
     // issuerDID,
     `did:ethr:${issuerDID.split(":")[3]}`,
@@ -216,21 +226,30 @@ app.post("/vc/create_vc", async (req, res) => {
     issuerDID,
     issuerPrivateKey
   );
-  return res
-    .status(200)
-    .json({ verifiable_credential: vcJwt, verifiable_presentation: vpJwt });
+  // Store in DB
+  const credDocRef = doc(db, "credentials", vcJwt);
+  await setDoc(credDocRef, {
+    user: userAddress,
+    vp_jwt: vpJwt,
+    vc_encrypted_hash: encryptedCIDBytes,
+  });
+  return res.status(200).json({
+    verifiable_credential: vcJwt,
+    verifiable_presentation: vpJwt,
+    encrypCID: encryptedCIDBytes,
+  });
 });
 
 app.post("/vc/revoke_vc", async (req, res) => {
   const cidHash = req.body.cidHash;
+  const endTime = req.body.endTime;
   const issuerPrivateKey = req.headers["private-key"];
   console.log("privKey: ", issuerPrivateKey);
   if (!issuerPrivateKey || !cidHash) {
     return res.status(400).json({ error: "Invalid request body." });
   }
-
   try {
-    await revokeCIDHash(issuerPrivateKey, cidHash);
+    await revokeCIDHash(issuerPrivateKey, cidHash, endTime);
     return res
       .status(200)
       .json({ message: "Credential revoked!", cid: cidHash });
@@ -241,6 +260,7 @@ app.post("/vc/revoke_vc", async (req, res) => {
 
 app.get("/vc/verify_vc", async (req, res) => {
   const vcJwt = req.headers["vc-jwt"];
+  const issuerAddress = req.query.issuerAddress;
   // const privateKey = req.headers["private-key"];
   if (!vcJwt) {
     return res.status(400).json({ error: "vc-jwt not found." });
@@ -260,9 +280,35 @@ app.get("/vc/verify_vc", async (req, res) => {
       // privateKey,
       vcJwt
     );
-    return res
-      .status(200)
-      .json({ verificationResponse, onChainVerificationResponse });
+    // verify revocation
+    const credDoc = await getDoc(doc(db, "credentials", vcJwt));
+    if (credDoc.exists()) {
+      const credDocData = credDoc.data();
+      const revocationEndTime = credDocData.revocation_end_time;
+      const endDate = revocationEndTime.toDate();
+      const currentDate = new Date();
+      if (currentDate > endDate) {
+        const isRevokedCurrently = true;
+        return res.status(200).json({
+          verificationResponse,
+          onChainVerificationResponse,
+          revocation: { isRevokedCurrently, endDate: endDate.getDate() },
+        });
+      } else {
+        const encrypCID = credDocData.vc_encrypted_hash;
+        // verify on chain revocation
+        const provider_contract = contract.connect(provider);
+        const issuerRevokedCids = await provider_contract.addressToRevokedCIDS(
+          issuerAddress
+        );
+        const isRevokedCurrently = issuerRevokedCids.includes(encrypCID);
+        return res.status(200).json({
+          verificationResponse,
+          onChainVerificationResponse,
+          revocation: { isRevokedCurrently, endDate: undefined },
+        });
+      }
+    }
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

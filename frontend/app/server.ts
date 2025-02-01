@@ -127,6 +127,7 @@ export const createCredential = async (
         issuer_did,
         holder_did,
         ipfsHash,
+        userAddress: issuer_address,
       },
       {
         headers: {
@@ -134,13 +135,15 @@ export const createCredential = async (
         },
       }
     );
-    const { verifiable_credential, verifiable_presentation } = response.data;
+    const { verifiable_credential, verifiable_presentation, encrypCID } =
+      response.data;
+    console.log("Created VC -> ", verifiable_credential, encrypCID);
     // store in db
-    const credDocRef = doc(db, "credentials", verifiable_credential);
-    await setDoc(credDocRef, {
-      user: issuer_address,
-      vp_jwt: verifiable_presentation,
-    });
+    // const credDocRef = doc(db, "credentials", verifiable_credential);
+    // await setDoc(credDocRef, {
+    //   user: issuer_address,
+    //   vp_jwt: verifiable_presentation,
+    // });
   } catch (error) {
     throw new Error(String(error));
   }

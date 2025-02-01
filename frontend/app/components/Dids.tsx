@@ -76,7 +76,10 @@ const Dids = () => {
         );
         console.log(response.data);
         const { token, ipfsHash, did } = response.data;
-        setDids((prev) => [...prev, did]);
+        setDids((prev) => [
+          ...prev,
+          { did, token, ipfsHash, isDeleting: false },
+        ]);
         toast.success("DID created successfully!", token);
         router.refresh();
       } catch (e: AxiosError | any) {

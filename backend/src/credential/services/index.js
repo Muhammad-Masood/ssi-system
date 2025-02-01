@@ -21,6 +21,14 @@ import {
 } from "../../index.js";
 import CryptoJS from "crypto-js";
 import axios from "axios";
+import {
+  collection,
+  getDocs,
+  query,
+  Timestamp,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 
 dotenv.config();
 
@@ -66,7 +74,7 @@ const createVerifiableCredential = async (
     encryptedCIDBytes
   );
   console.log("Transaction Processed: ", tx);
-  return vcJwt;
+  return { vcJwt, encryptedCIDBytes };
 };
 
 /**
@@ -88,8 +96,8 @@ const isCertificateOnChainVerified = async (
   jwt
 ) => {
   // on-chain verification
-  const issuer_address = issuerDID.split(":")[2];
-  const holder_address = holderDID.split(":")[2];
+  const issuer_address = issuerDID.split(":")[3];
+  const holder_address = holderDID.split(":")[3];
   const signer_contract = contract.connect(provider);
   const userIssuedCertificates = await signer_contract.userToIssuedCertificates(
     issuer_address
@@ -230,15 +238,39 @@ const decryptCIDHash = (encryptedCID) => {
   return decrypted.toString("utf8");
 };
 
-const revokeCIDHash = async (issuerPrivateKey, cidHash) => {
+const revokeCIDHash = async (issuerPrivateKey, cidHash, endTime) => {
   // encrypt hash
   const encryptedCID = encryptCIDHash(cidHash);
   const encryptedCIDBytes = stringToBytesHex(encryptedCID);
   console.log(encryptedCIDBytes);
-  const signer = new ethers.Wallet(issuerPrivateKey, provider);
-  const signer_contract = contract.connect(signer);
-  const tx = await signer_contract.revokeCertificate(encryptedCIDBytes);
-  console.log("Transaction Processed: ", tx);
+  if (endTime) {
+    // update DB -> Temporarily
+    const credentialsRef = collection(db, "credentials");
+    const q = query(
+      credentialsRef,
+      where("vc_encrypted_hash", "==", encryptedCIDBytes)
+    );
+    const querySnapshot = await getDocs(q);
+    const formattedEndDate = new Date(endTime);
+    const firestoreEndDate = Timestamp.fromDate(formattedEndDate);
+    if (!querySnapshot.empty) {
+      querySnapshot.forEach(async (docSnap) => {
+        const docRef = doc(db, "credentials", docSnap.id); // Get document reference
+        // Update the `revocation_end_time` field
+        await updateDoc(docRef, {
+          revocation_end_time: new Date(firestoreEndDate), // Firestore Timestamp
+        });
+        console.log(`Updated revocation_end_time for document: ${docSnap.id}`);
+      });
+    } else {
+      console.log("No document found with this encrypted hash.");
+    }
+  } else {
+    const signer = new ethers.Wallet(issuerPrivateKey, provider);
+    const signer_contract = contract.connect(signer);
+    const tx = await signer_contract.revokeCertificate(encryptedCIDBytes);
+    console.log("Transaction Processed: ", tx);
+  }
 };
 
 // Check if the provided CID has been revoked

@@ -91,7 +91,9 @@ const Verify = () => {
       setIsCertLoading(true);
       try {
         const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/verify_vc`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/verify_vc?issuerAddress=${
+            wallet.signer!.address
+          }`,
           {
             headers: {
               "vc-jwt": vcJwt,

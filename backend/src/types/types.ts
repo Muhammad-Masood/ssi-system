@@ -6,6 +6,10 @@ export type Certificate = {
   certificate: any;
 };
 
+export type RevokedCredential = {
+  [cid: string]: { permanent: boolean; endDate?: string };
+};
+
 export type User = {
   // id: number;
   // name: string;
@@ -18,9 +22,9 @@ export type User = {
 export type Credentials = {
   address: string;
   access_token: string;
-}
+};
 
 export type Wallet = {
   privateKey: string;
   address: string;
-}
+};

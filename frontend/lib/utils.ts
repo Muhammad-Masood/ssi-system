@@ -81,3 +81,7 @@ export type CredentialDB = {
   vp_jwt: string;
   vc_jwt: string;
 };
+
+export type RevokedCredential = {
+  [cid: string]: { permanent: boolean; endDate?: string };
+};

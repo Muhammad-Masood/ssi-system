@@ -24,15 +24,24 @@ import { Button } from "@/components/ui/button";
 import { ExternalLinkIcon, Trash2Icon } from "lucide-react";
 import axios from "axios";
 import { Wallet } from "ethers";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { RevokedCredential } from "@/lib/utils";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-const revokeCredential = async (cid: string, signer: undefined | Wallet) => {
-  // const { wallet } = useContext(WalletContext);
+const revokeCredential = async (
+  cid: string,
+  signer: undefined | Wallet,
+  endTime?: string
+) => {
   try {
-    // TODO: Implement the actual revocation logic here
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/revoke_vc`,
       {
         cidHash: cid,
+        endTime
       },
       {
         headers: {
@@ -41,7 +50,6 @@ const revokeCredential = async (cid: string, signer: undefined | Wallet) => {
       }
     );
     console.log(response.data);
-    console.log(`Revoking credential with CID: ${cid}`);
     toast.success(`Credential ${cid} revoked successfully`);
     return true;
   } catch (error: any) {
@@ -64,10 +72,14 @@ const CredentialList = ({
 }) => {
   const [isRevoking, setIsRevoking] = useState<string | null>(null);
   const { wallet } = useContext(WalletContext);
+  const [revocationType, setRevocationType] = useState<
+    "permanent" | "temporary"
+  >("permanent");
+  const [revocationEndDate, setRevocationEndDate] = useState<string>("");
 
   const handleRevoke = async (cid: string) => {
     setIsRevoking(cid);
-    const success = await revokeCredential(cid, wallet.signer);
+    const success = await revokeCredential(cid, wallet.signer, revocationEndDate);
     // if (success) {
     //   setCredentials(credentials.filter((c) => c !== cid));
     // }
@@ -97,12 +109,18 @@ const CredentialList = ({
                         View
                       </Button>
                     </Link>
-                    {revokedCredentials.includes(cid) ? (
-                      <Button variant="destructive" size="sm" disabled>
-                        <Trash2Icon className="h-4 w-4 mr-2" />
-                        Revoked
-                      </Button>
-                    ) : (
+                    {
+                      // revokedCredentials ? (
+                      //   // <Button variant="destructive" size="sm" disabled>
+                      //   //   <Trash2Icon className="h-4 w-4 mr-2" />
+                      //   //   {revokedCredentials[cid].permanent
+                      //   //     ? "Revoked"
+                      //   //     : `Revoked until ${new Date(
+                      //   //         revokedCredentials[cid].endDate!
+                      //   //       ).toLocaleDateString()}`}
+                      //   // </Button>
+                      //   <></>
+                      // ) :
                       title === "Issued Credentials" && (
                         <Dialog>
                           <DialogTrigger asChild>
@@ -115,15 +133,55 @@ const CredentialList = ({
                             <DialogHeader>
                               <DialogTitle>Revoke Credential</DialogTitle>
                               <DialogDescription>
-                                Are you sure you want to revoke this credential?
-                                This action cannot be undone.
+                                Choose how you want to revoke this credential.
                               </DialogDescription>
                             </DialogHeader>
+                            <RadioGroup
+                              value={revocationType}
+                              onValueChange={(value) =>
+                                setRevocationType(
+                                  value as "permanent" | "temporary"
+                                )
+                              }
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem
+                                  value="permanent"
+                                  id="permanent"
+                                />
+                                <Label htmlFor="permanent">Permanent</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem
+                                  value="temporary"
+                                  id="temporary"
+                                />
+                                <Label htmlFor="temporary">Temporary</Label>
+                              </div>
+                            </RadioGroup>
+                            {revocationType === "temporary" && (
+                              <div className="flex flex-col space-y-2">
+                                <Label htmlFor="endDate">Revoke until:</Label>
+                                <Input
+                                  type="date"
+                                  id="endDate"
+                                  value={revocationEndDate}
+                                  onChange={(e) =>
+                                    setRevocationEndDate(e.target.value)
+                                  }
+                                  min={new Date().toISOString().split("T")[0]}
+                                />
+                              </div>
+                            )}
                             <DialogFooter>
                               <Button
                                 variant="destructive"
                                 onClick={() => handleRevoke(cid)}
-                                disabled={isRevoking === cid}
+                                disabled={
+                                  isRevoking === cid ||
+                                  (revocationType === "temporary" &&
+                                    !revocationEndDate)
+                                }
                               >
                                 {isRevoking === cid ? "Revoking..." : "Revoke"}
                               </Button>
@@ -131,7 +189,7 @@ const CredentialList = ({
                           </DialogContent>
                         </Dialog>
                       )
-                    )}
+                    }
                   </div>
                 </div>
               </Card>
@@ -157,6 +215,11 @@ const Credentials = () => {
   const [revokedCredentials, setRevokedCredentials] = useState<string[]>([]);
   const { wallet } = useContext(WalletContext);
   const { isConnected, signer } = wallet;
+
+  const rc: RevokedCredential = {
+    "123": { permanent: true },
+    "1ere23": { permanent: true },
+  };
   useEffect(() => {
     async function fetchCredentials() {
       try {
