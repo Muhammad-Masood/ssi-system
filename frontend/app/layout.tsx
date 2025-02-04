@@ -4,6 +4,15 @@ import Providers, { WalletContextProvider } from "@/providers/Providers";
 import Navbar from "./components/Navbar";
 import { Toaster } from "@/components/ui/sonner";
 import { getSession } from "@/auth";
+import { Inter } from "next/font/google"
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "SSI Health - Decentralized Identities for Healthcare",
+  description:
+    "Manage decentralized identities and verifiable credentials for hospitals and health sectors.",
+};
 
 export default async function RootLayout({
   children,
@@ -13,10 +22,11 @@ export default async function RootLayout({
   const session = await getSession();
   return (
     <html lang="en">
-      <head>
+      {/* <head>
         <title>SSI KIT</title>
-      </head>
-      <body className="bg-gray-100 px-4">
+      </head> */}
+      {/* <body className="bg-gray-100 px-4"> */}
+      <body className={inter.className}>
         <Providers session={session}>
           <WalletContextProvider>
             <Navbar />

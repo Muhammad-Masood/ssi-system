@@ -52,13 +52,13 @@ const createDIDJWT = async (subject, privateKey, method) => {
   console.log(did);
   const jwt = await createJWT(
     {
-      aud: did,
+      aud: splitDid(did),
       sub: subject,
       iat: Math.floor(Date.now() / 1000),
       exp: expiry,
     },
     {
-      issuer: did,
+      issuer: splitDid(did),
       signer,
     },
     {
@@ -123,15 +123,22 @@ const decodeDIDJWT = (jwt) => {
   return decodeJWT(jwt);
 };
 
+export const splitDid = (did) => {
+  console.log(did);
+  return `did:ethr:${did.split(":")[3]}`;
+};
+
 /**
  * Returns the verified DID document
  * @param {string} jwt the jwt to verify
  */
 const verifyDIDJwt = async (jwt) => {
+  console.log("verifying");
   const resolver = new Resolver({
     ...getResolver({ infuraProjectId: "4f653d2d351148769fd1017be6f45d45" }),
   });
   const decoded_jwt = decodeDIDJWT(jwt);
+  console.log("decoded_jwt", decoded_jwt);
   const verificationResponse = await verifyJWT(jwt, {
     resolver,
     audience: decoded_jwt.payload.aud,
@@ -141,13 +148,13 @@ const verifyDIDJwt = async (jwt) => {
 
 const isDIDOnChainVerified = async (userDID, didJWT) => {
   // on-chain verification
-  const user_address = userDID.split(":")[3];
+  const user_address = userDID.split(":")[2];
   console.log("User address -> ", user_address);
   const provider_contract = contract.connect(provider);
   const userDIDsBytes = await provider_contract.retrieveResolvableDIDHash(
     user_address
   ); // bytes[]
-  const userDIDs = userDIDsBytes.map((udid) => bytesHexToString(udid));
+  const userDIDs = userDIDsBytes.map((udid) => bytesHexToString(udid)).filter((udid) => udid !== "");
   console.log(userDIDs);
   let isVerified = false;
   await Promise.all(

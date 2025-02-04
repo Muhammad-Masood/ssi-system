@@ -5,6 +5,7 @@ import {
   decodeDIDJWT,
   deleteDIDJWT,
   isDIDOnChainVerified,
+  splitDid,
   verifyDIDJwt,
 } from "./did/services/index.js";
 import {
@@ -156,6 +157,11 @@ app.get("/dids/verify_did_jwt", async (req, res) => {
       verificationResponse.payload.aud,
       token
     );
+    console.log(
+      "main req result",
+      onChainVerificationResponse,
+      verificationResponse.verified
+    );
     return res.status(200).json({
       offChainVerificationStatus: verificationResponse.verified,
       onChainVerificationStatus: onChainVerificationResponse,
@@ -194,7 +200,7 @@ app.post("/vc/create_vc", async (req, res) => {
   }
 
   const vcPayload = {
-    sub: `did:ethr:${holderDID.split(":")[3]}`,
+    sub: splitDid(holderDID),
     vc: {
       "@context": ["https://www.w3.org/2018/credentials/v1"],
       type: ["VerifiableCredential"],
@@ -209,8 +215,7 @@ app.post("/vc/create_vc", async (req, res) => {
   };
   const { vcJwt, encryptedCIDBytes } = await createVerifiableCredential(
     vcPayload,
-    // issuerDID,
-    `did:ethr:${issuerDID.split(":")[3]}`,
+    splitDid(issuerDID),
     issuerPrivateKey
   );
   console.log("vc_token -> ", vcJwt);
@@ -223,7 +228,7 @@ app.post("/vc/create_vc", async (req, res) => {
   };
   const vpJwt = await createVCPresentation(
     vpPayload,
-    issuerDID,
+    splitDid(issuerDID),
     issuerPrivateKey
   );
   // Store in DB
@@ -285,15 +290,18 @@ app.get("/vc/verify_vc", async (req, res) => {
     if (credDoc.exists()) {
       const credDocData = credDoc.data();
       const revocationEndTime = credDocData.revocation_end_time;
-      const endDate = revocationEndTime.toDate();
-      const currentDate = new Date();
-      if (currentDate > endDate) {
-        const isRevokedCurrently = true;
-        return res.status(200).json({
-          verificationResponse,
-          onChainVerificationResponse,
-          revocation: { isRevokedCurrently, endDate: endDate.getDate() },
-        });
+      if (revocationEndTime) {
+        console.log("revocation_end_time -> ", revocationEndTime);
+        const endDate = revocationEndTime.toDate();
+        const currentDate = new Date();
+        if (currentDate > endDate) {
+          const isRevokedCurrently = true;
+          return res.status(200).json({
+            verificationResponse,
+            onChainVerificationResponse,
+            revocation: { isRevokedCurrently, endDate: endDate.getDate() },
+          });
+        }
       } else {
         const encrypCID = credDocData.vc_encrypted_hash;
         // verify on chain revocation

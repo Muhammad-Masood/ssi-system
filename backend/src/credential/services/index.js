@@ -96,8 +96,8 @@ const isCertificateOnChainVerified = async (
   jwt
 ) => {
   // on-chain verification
-  const issuer_address = issuerDID.split(":")[3];
-  const holder_address = holderDID.split(":")[3];
+  const issuer_address = issuerDID.split(":")[2];
+  const holder_address = holderDID.split(":")[2];
   const signer_contract = contract.connect(provider);
   const userIssuedCertificates = await signer_contract.userToIssuedCertificates(
     issuer_address
