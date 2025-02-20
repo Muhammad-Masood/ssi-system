@@ -4,7 +4,7 @@ import ssi from "@/public/ssi.jpg";
 
 export default function Hero() {
   return (
-    <section className="bg-blue-50 py-20">
+    <section className="bg-blue-50 py-20 px-[1.3rem]">
       <div className="container mx-auto px-4 flex flex-col md:flex-row items-center">
         <div className="md:w-1/2 mb-10 md:mb-0">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">

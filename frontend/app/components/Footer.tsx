@@ -2,13 +2,13 @@ import Link from "next/link"
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-100 py-8">
+    <footer className="bg-gray-100 py-8 px-[1.3rem]">
       <div className="container mx-auto px-4">
         <div className="flex flex-wrap justify-between">
           <div className="w-full md:w-1/3 mb-6 md:mb-0">
             <h3 className="text-lg font-semibold mb-2">SSI Health</h3>
             <p className="text-gray-600">
-              Empowering healthcare with decentralized identities and verifiable credentials.
+              Empowering healthcare with decentralized <br/> identities and verifiable credentials.
             </p>
           </div>
           <div className="w-full md:w-1/3 mb-6 md:mb-0">

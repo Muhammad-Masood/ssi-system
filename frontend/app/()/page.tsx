@@ -1,9 +1,9 @@
 import { getSession } from "@/auth";
-import { setupUserWallet } from "./server";
-import Header from "./components/Header";
-import Hero from "./components/Hero";
-import Features from "./components/Features";
-import Footer from "./components/Footer";
+import { setupUserWallet } from "../server";
+import Header from "../components/Header";
+import Hero from "../components/Hero";
+import Features from "../components/Features";
+import Footer from "../components/Footer";
 import { NextResponse } from "next/server";
 
 export async function middleware(request: Request) {
