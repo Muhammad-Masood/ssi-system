@@ -68,15 +68,15 @@ export function ConnectWallet() {
         }`}
       >
         {isConnected
-          ? "✅ Connected"
+          ? `✅ Connected ${wallet.signer!.address.slice(0, 6)}...`
           : isConnecting
           ? "🔄 Connecting..."
-          : "💳 Connect Wallet"}
+          : "Connect Wallet"}
       </Button>
 
-      <div>
+      {/* <div>
         {wallet.signer && (
-          <div className="flex items-center lg:items-start bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-lg">
+          <div className="flex items-center lg:items-start bg-gray-50 p-4 rounded-lg shadow-lg">
             <div className="flex items-center mt-1">
               <Link
                 href={`https://testnet.bscscan.com/address/${wallet.signer.address}`}
@@ -94,7 +94,7 @@ export function ConnectWallet() {
             </div>
           </div>
         )}
-      </div>
+      </div> */}
     </div>
   );
 }

@@ -12,8 +12,8 @@ export default function Login() {
   const [selectedTab, setSelectedTab] = useState("holder");
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-        <div className="bg-white px-[5rem] py-[2rem] rounded-lg shadow-md items-center flex flex-col">
+      <div className="flex flex-col items-center justify-center min-h-screen ">
+        <div className="bg-gray-100 px-[5rem] py-[2rem] rounded-lg shadow-md items-center flex flex-col">
           <div className="pb-3 mb-8">
             <h1 className="text-3xl text-gray-800 font-bold text-center pb-4">
               Sign In

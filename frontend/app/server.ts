@@ -3,7 +3,7 @@
 import { getSession } from "@/auth";
 import { contract } from "@/lib/contract";
 import { db } from "@/lib/firebase";
-import { DIDDB } from "@/lib/utils";
+import { DIDDB, ReqVcData } from "@/lib/utils";
 import axios from "axios";
 import { ethers, Wallet } from "ethers";
 import {
@@ -108,6 +108,31 @@ export const deleteUserDid = async (
     return response.data.message;
   } catch (error) {
     return String(error);
+  }
+};
+
+export const issueBankIdVc = async (data: ReqVcData, privateKey: string) => {
+  const { holderDid, fullName, birthDate, nationalID } = data;
+  try {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/issue_bank_id_vc`,
+      {
+        fullName,
+        birthDate,
+        holderDid,
+        nationalID,
+      },
+      {
+        headers: {
+          "private-key": privateKey,
+        },
+      }
+    );
+    console.log("server response: ", response.data);
+    const cid = response.data.documentHash;
+    return cid;
+  } catch (error) {
+    throw new Error(String(error));
   }
 };
 

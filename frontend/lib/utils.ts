@@ -38,6 +38,10 @@ export const userNavbarLinks: NavbarLink[] = [
     name: "Auth",
     href: "/auth",
   },
+  {
+    name: "Request VC",
+    href: "/requestvc",
+  },
 ];
 
 export const issuerNavbarLinks: NavbarLink[] = [
@@ -84,4 +88,13 @@ export type CredentialDB = {
 
 export type RevokedCredential = {
   [cid: string]: { permanent: boolean; endDate?: string };
+};
+
+export type ReqVcData = {
+  holderDid: string;
+  fullName: string;
+  birthDate: string;
+  nationalID: string;
+  jws: string;
+  type: string;
 };

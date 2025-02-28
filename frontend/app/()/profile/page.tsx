@@ -1,9 +1,9 @@
-import Credentials from "../components/Credentials";
-import Dids from "../components/Dids";
+import Credentials from "../../components/Credentials";
+import Dids from "../../components/Dids";
 
 const Profile = () => {
   return (
-    <div className="container mx-auto px-4 py-16 max-w-7xl mt-[4rem]">
+    <div className="container py-16 px-[1.3rem]">
       <h1 className="text-4xl font-bold text-center mb-16">Your Profile</h1>
       <div className="grid lg:grid-cols-2 gap-12">
         <div className="space-y-8">

@@ -1,5 +1,5 @@
 import React, { Suspense, useContext } from "react";
-import Verify from "../components/Verify";
+import Verify from "../../components/Verify";
 
 const page = () => {
   return (

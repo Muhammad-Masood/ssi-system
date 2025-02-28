@@ -8,7 +8,7 @@ import { getResolver } from "ethr-did-resolver";
 import { Resolver } from "did-resolver";
 import { EthrDID } from "ethr-did";
 import { ES256KSigner, hexToBytes } from "did-jwt";
-import { ethers } from "ethers";
+import { ethers, uuidV4 } from "ethers";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import {
@@ -22,13 +22,16 @@ import {
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import {
+  addDoc,
   collection,
+  getDoc,
   getDocs,
   query,
   Timestamp,
   updateDoc,
   where,
 } from "firebase/firestore";
+import { db } from "../../database/firebase.js";
 
 dotenv.config();
 
@@ -37,6 +40,128 @@ const issuer = new EthrDID({
   privateKey:
     "f013ecdaeaa6955889a6a38e67f391b67d328dd9b3afbc6574ac35c88fd5d0b3",
 });
+
+// User Credential Request
+const submitVcRequest = async (reqData) => {
+  try {
+    console.log(reqData);
+    const { userPrivateKey, ...data } = reqData;
+    // Generate JWS Signature using private key
+    const jws = "";
+    const reqDoc = await addDoc(collection(db, "vc_requests"), {
+      type: "bank-id",
+      jws: jws,
+      ...data,
+    });
+    return reqDoc.id;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const getVcRequests = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "vc_requests"));
+    const requests = querySnapshot.docs.map((doc) => doc.data());
+    return requests;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const generateMedicalVcPayload = () => {};
+
+const generateBankIdVcPayload = (
+  fullName,
+  birthDate,
+  nationalID,
+  holderDID,
+  jwsSignature
+) => {
+  const vcId = uuidV4();
+  const issuanceDate = new Date().toISOString();
+
+  const bankIDVCPayload = {
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1",
+      "https://schema.affinidi.com/NorwegianBankIDV1V1-0.jsonld",
+    ],
+    id: `claimId:${vcId}`,
+    type: ["VerifiableCredential", "NorwegianBankIDV1"],
+    holder: {
+      id: holderDID,
+    },
+    issuer: "https://www.signicat.com",
+    issuanceDate,
+    credentialSubject: {
+      data: {
+        "@type": "Person",
+      },
+      birthDate: {
+        "@type": "Date",
+        date: birthDate,
+      },
+      name: {
+        "@type": "Name",
+        name: fullName,
+      },
+      nationalID: nationalID,
+    },
+    certificate: {
+      certificateIssuer: "Government",
+      certificateUniqueID: uuidV4(),
+      // certificateExpiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toISOString(),
+      country: "NO",
+    },
+    credentialStatus: {
+      id: "https://www.signicat.com/status/100",
+      type: "CredentialStatusList2017",
+    },
+    credentialSchema: {
+      id: "https://schema.affinidi.com/NorwegianBankIDV1V1-0.json",
+      type: "JsonSchemaValidator2018",
+    },
+    proof: {
+      type: "RsaSignature2018",
+      created: issuanceDate,
+      proofPurpose: "assertionMethod",
+      verificationMethod: "https://signicat.com/issuers/144223#key-1",
+      jws: jwsSignature, // Dummy JWS signature
+    },
+  };
+  return bankIDVCPayload;
+};
+
+const createBankIdVc = async (
+  fullName,
+  birthDate,
+  holderDID,
+  nationalID,
+  issuerPrivateKey
+) => {
+  const bankIdVcPayload = generateBankIdVcPayload(
+    fullName,
+    birthDate,
+    nationalID,
+    holderDID,
+    "jwsSignature"
+  );
+  const vcDocJson = JSON.stringify(bankIdVcPayload);
+  const cid = await storeDataOnIPFS(vcDocJson);
+  console.log("Credential stored on IPFS with -> ", cid);
+  const encryptedCID = encryptCIDHash(cid);
+  console.log("Encrypted CID -> ", encryptedCID);
+  const encryptedCIDBytes = stringToBytesHex(encryptedCID);
+  const holderAddress = holderDID.split(":")[2];
+  const signer = new ethers.Wallet(issuerPrivateKey, provider);
+  const signer_contract = contract.connect(signer);
+  const tx = await signer_contract.setIssuedCertificateHash(
+    holderAddress,
+    encryptedCIDBytes
+  );
+  console.log("Transaction Processed: ", tx);
+  return cid;
+};
 
 /**
  * Creates a Verifiable Credential
@@ -300,4 +425,8 @@ export {
   encryptCIDHash,
   revokeCIDHash,
   getRevokedCIDs,
+  generateBankIdVcPayload,
+  createBankIdVc,
+  submitVcRequest,
+  getVcRequests,
 };

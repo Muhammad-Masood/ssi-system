@@ -10,7 +10,7 @@ import { LogOut } from "lucide-react";
 export default function Logout() {
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex flex-col items-center justify-center min-h-screen ">
         <div className="bg-white px-[5rem] py-[2rem] rounded-lg shadow-md items-center flex flex-col">
           <div className="pb-1 mb-4">
             <h1 className="text-3xl text-gray-800 font-bold text-center pb-4">

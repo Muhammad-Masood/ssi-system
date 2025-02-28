@@ -1,4 +1,4 @@
-import IssueCredForm from "../components/IssueCredForm";
+import IssueCredForm from "../../components/IssueCredForm";
 
 const page = () => {
   return (

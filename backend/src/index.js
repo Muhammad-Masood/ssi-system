@@ -18,6 +18,9 @@ import {
   verifyCredentialPresentation,
   getRevokedCIDs,
   revokeCIDHash,
+  createBankIdVc,
+  submitVcRequest,
+  getVcRequests,
 } from "./credential/services/index.js";
 import axios from "axios";
 import crypto from "crypto";
@@ -179,6 +182,60 @@ app.get("/dids/verify_did_jwt", async (req, res) => {
 
 app.get("/vc", (req, res) => {
   res.send("Verifiable Credentials.");
+});
+
+app.get("/vc/get_vc_requests", async (req, res) => {
+  const vc_requests = await getVcRequests();
+  return res.status(200).json({ vc_requests });
+});
+
+app.post("/vc/submit_bank_id_vc_request", async (req, res) => {
+  const { fullName, birthDate, nationalID, holderDID } = req.body;
+  console.log(req.body);
+  const userPrivateKey = req.headers["private-key"];
+  console.log(userPrivateKey);
+  // if (
+  //   !userPrivateKey ||
+  //   !fullName ||
+  //   !birthDate ||
+  //   !holderDID ||
+  //   !nationalID
+  //   // !userId
+  // ) {
+  //   return res.status(400).json({ error: "Invalid request body." });
+  // }
+  const reqId = await submitVcRequest(req.body);
+  return res.status(200).json({
+    message: "Bank Id VC requested successfully!",
+    reqId: reqId,
+  });
+});
+
+app.post("/vc/issue_bank_id_vc", async (req, res) => {
+  const { fullName, birthDate, nationalID, holderDID } = req.body;
+  const issuerPrivateKey = req.headers["private-key"];
+  if (
+    !issuerPrivateKey ||
+    !fullName ||
+    !birthDate ||
+    !holderDID ||
+    !nationalID
+  ) {
+    return res.status(400).json({ error: "Invalid request body." });
+  }
+
+  const bankIdVcHash = await createBankIdVc(
+    fullName,
+    birthDate,
+    holderDID,
+    nationalID,
+    issuerPrivateKey
+  );
+
+  return res.status(200).json({
+    message: "Successfully Issued Bank Id VC",
+    documentHash: bankIdVcHash,
+  });
 });
 
 app.post("/vc/create_vc", async (req, res) => {
