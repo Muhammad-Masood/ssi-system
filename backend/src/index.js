@@ -37,6 +37,12 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "./database/firebase.js";
+import {
+  create_medication_request,
+  create_patient_resource,
+  get_medication_request,
+  get_patient_resource,
+} from "./services/fhir/index.js";
 dotenv.config();
 
 const app = express();
@@ -428,25 +434,57 @@ app.get("/vc/decryptCID", async (req, res) => {
 ///////////////////////////////////
 
 app.post("/fhir/resource/create_patient", async (req, res) => {
-  const { fullName, birthDate, nationalID, holderDID } = req.body;
-  console.log(req.body);
+  const { patientData, holderAddress } = req.body;
   const userPrivateKey = req.headers["private-key"];
-  console.log(userPrivateKey);
-  // if (
-  //   !userPrivateKey ||
-  //   !fullName ||
-  //   !birthDate ||
-  //   !holderDID ||
-  //   !nationalID
-  //   // !userId
-  // ) {
+  if (!userPrivateKey) {
+    return res.status(400).json({ error: "Invalid request body." });
+  }
+  const docId = await create_patient_resource(
+    patientData,
+    userPrivateKey,
+    holderAddress
+  );
+  return res.status(200).json({
+    message: "Patient resource created and issued successfully!",
+    docId: docId,
+  });
+});
+
+app.get("/fhir/resource/get_patient/:id", async (req, res) => {
+  try {
+    const patient_id = req.params.id;
+    const patient = await get_patient_resource(patient_id);
+    res.json(patient);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error retrieving patient", details: String(error) });
+  }
+});
+app.post("/fhir/resource/create_medication_request", async (req, res) => {
+  const { medicationRequest } = req.body;
+  // const userPrivateKey = req.headers["private-key"];
+  // if (!userPrivateKey) {
   //   return res.status(400).json({ error: "Invalid request body." });
   // }
-  const reqId = await submitVcRequest(req.body);
+  const docId = await create_medication_request(medicationRequest);
   return res.status(200).json({
-    message: "Bank Id VC requested successfully!",
-    reqId: reqId,
+    message: "Patient medication request created successfully!",
+    docId: docId,
   });
+});
+
+app.get("/fhir/resource/get_med_req/:id", async (req, res) => {
+  try {
+    const med_req_id = req.params.id;
+    const med_req = await get_medication_request(med_req_id);
+    res.json(med_req);
+  } catch (error) {
+    res.status(500).json({
+      error: "Error retrieving medication request",
+      details: String(error),
+    });
+  }
 });
 
 app.listen(port, async () => {
