@@ -70,6 +70,17 @@ export const verifierNavbarLinks: NavbarLink[] = [
   },
 ];
 
+export const adminNavbarLinks: NavbarLink[] = [
+  // {
+  //   name: "Verify",
+  //   href: "/verify",
+  // },
+  // {
+  //   name: "Auth",
+  //   href: "/auth",
+  // },
+];
+
 // export const links: NavbarLink[] = [
 // ];
 
@@ -91,7 +102,9 @@ export type RevokedCredential = {
 };
 
 export type ReqVcData = {
-  holderDid: string;
+  id: string;
+  status: "pending" | "approved" | "rejected";
+  holderDID: string;
   fullName: string;
   birthDate: string;
   nationalID: string;

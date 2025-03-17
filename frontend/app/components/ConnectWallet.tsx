@@ -20,34 +20,40 @@ export function ConnectWallet() {
 
   const handleConnect = async () => {
     try {
-      // const dbwallet = await getUserWallet();
-      const session = await getSessionServer();
-      // if (dbwallet) {
-      if (session) {
-        setIsConnecting(true);
-        const userWalletDocRef = doc(db, "wallets", session.user!.email!);
-        const walletDoc = await getDoc(userWalletDocRef);
-        const walletData = walletDoc.data()! as any;
-        const provider = new ethers.JsonRpcProvider(
-          // process.env.NEXT_PUBLIC_RPC_URL as string
-          "https://bsc-testnet.nodereal.io/v1/54ee4dc00e384bbc8c8a75d42287f585"
-        );
-        const wallet = new ethers.Wallet(walletData.privateKey, provider);
-        console.log(walletData.tab);
-        setWallet({
-          provider: provider,
-          signer: wallet,
-          isConnected: true,
-          tab: walletData.tab,
-        });
-        setIsConnecting(false);
-        const walletBalance = await provider.getBalance(wallet.address);
-        console.log(walletBalance);
-        setWalletBalance(
-          String(Number(ethers.formatEther(walletBalance)).toFixed(2))
+      if (isConnected) {
+        console.log("opening window");
+        window.open(
+          `https://testnet.bscscan.com/address/${wallet.signer!.address}`,
+          "_blank"
         );
       } else {
-        toast.error("Login to your account.");
+        const session = await getSessionServer();
+        if (session) {
+          setIsConnecting(true);
+          const userWalletDocRef = doc(db, "wallets", session.user!.email!);
+          const walletDoc = await getDoc(userWalletDocRef);
+          const walletData = walletDoc.data()! as any;
+          const provider = new ethers.JsonRpcProvider(
+            // process.env.NEXT_PUBLIC_RPC_URL as string
+            "https://bsc-testnet.nodereal.io/v1/54ee4dc00e384bbc8c8a75d42287f585"
+          );
+          const wallet = new ethers.Wallet(walletData.privateKey, provider);
+          console.log(walletData.tab);
+          setWallet({
+            provider: provider,
+            signer: wallet,
+            isConnected: true,
+            tab: walletData.tab,
+          });
+          setIsConnecting(false);
+          const walletBalance = await provider.getBalance(wallet.address);
+          console.log(walletBalance);
+          setWalletBalance(
+            String(Number(ethers.formatEther(walletBalance)).toFixed(2))
+          );
+        } else {
+          toast.error("Login to your account.");
+        }
       }
     } catch (error) {
       toast.error(String(error));

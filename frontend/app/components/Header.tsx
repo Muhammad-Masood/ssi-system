@@ -18,6 +18,7 @@ import { WalletContext } from "@/providers/Providers";
 import Link from "next/link";
 import { ConnectWallet } from "./ConnectWallet";
 import {
+  adminNavbarLinks,
   issuerNavbarLinks,
   NavbarLink,
   userNavbarLinks,
@@ -25,13 +26,16 @@ import {
 } from "@/lib/utils";
 import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export function Header({ session }: { session: Session | null }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<any>();
   const { wallet } = useContext(WalletContext);
   const router = useRouter();
+  const pathName = usePathname();
+  const isAdminPath = pathName.startsWith("/admin");
+  console.log(isAdminPath);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-[1.3rem] py-1">
@@ -57,6 +61,8 @@ export function Header({ session }: { session: Session | null }) {
             ? issuerNavbarLinks
             : wallet.tab === "verifier"
             ? verifierNavbarLinks
+            : isAdminPath
+            ? adminNavbarLinks
             : userNavbarLinks
           ).map((link: NavbarLink, index: number) => (
             <Link
@@ -122,7 +128,7 @@ export function Header({ session }: { session: Session | null }) {
                   Sign out
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                   <ConnectWallet />
+                  <ConnectWallet />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

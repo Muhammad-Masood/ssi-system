@@ -4,6 +4,8 @@ import { DataTable } from "../../../components/admin/data-table";
 import { columns } from "../../../components/admin/columns";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { DashboardHeader } from "../../../components/admin/dashboard-header";
+import { Header } from "@/app/components/Header";
+import { getSession } from "@/auth";
 
 const stats = [
   {
@@ -59,10 +61,12 @@ const data = [
   },
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await getSession();
   return (
     <SidebarInset>
-      <DashboardHeader />
+      <Header session={session} />
+      {/* <DashboardHeader /> */}
       <main className="flex-1 space-y-4 p-8 pt-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (

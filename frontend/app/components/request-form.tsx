@@ -56,7 +56,9 @@ export function RequestForm() {
   // const [selectedCredentialType, setSelectedCredentialType] =
   //   React.useState<string>("");
   const [data, setData] = React.useState<ReqVcData>({
-    holderDid: "",
+    id: "",
+    status: "pending",
+    holderDID: "",
     fullName: "",
     birthDate: "",
     nationalID: "",
@@ -140,7 +142,7 @@ export function RequestForm() {
                   id="holderDid"
                   placeholder="did:example:123..."
                   required
-                  value={data.holderDid}
+                  value={data.holderDID}
                   onChange={handleInputChange}
                 />
               </div>
