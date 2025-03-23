@@ -86,48 +86,8 @@ const get_patient_resource = async (patient_id) => {
   }
 };
 
-// Medications
-/**
- * @param {import("../../types/schema.js").MedicationRequest} medication_request_data
- * @returns {Promise<string>}
- */
-const create_medication_request = async (medication_request_data) => {
-  try {
-    // Store on IPFS
-    const reqDocJson = JSON.stringify(medication_request_data);
-    const reqCid = await storeDataOnIPFS(reqDocJson);
-    console.log("Credential stored on IPFS with -> ", reqCid);
-    const medReqDoc = await addDoc(collection(db, "fhir_medication_request"), {
-      medReqId: medReqDoc.identifier,
-      ipfsHash: reqCid,
-    });
-    console.log("Medication Request created and stored in db.");
-    return medReqDoc.id;
-  } catch (error) {
-    console.log("Error storing FHIR Patient resource", error);
-  }
-};
 
-/**
- * @param {string} med_req_id
- * @returns {Promise<import("../../types/schema.js").MedicationRequest>} medication request
- */
-const get_medication_request = async (med_req_id) => {
-  try {
-    const medReqRef = collection(db, "fhir_medication_request");
-    const q = query(medReqRef, where("medReqId", "==", med_req_id));
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) return null;
-    const medicationRequest = querySnapshot.docs[0].data();
-    return medicationRequest;
-  } catch (error) {
-    console.log(error);
-  }
-};
 export {
   create_patient_resource,
   get_patient_resource,
-  create_medication_request,
-  get_medication_request,
 };

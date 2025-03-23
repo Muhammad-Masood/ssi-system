@@ -1,5 +1,17 @@
 // FHIR Templates
 
+// Task //
+/**
+ * @typedef {Object} Task
+ * @property {"Task"} resourceType
+ * @property {string} identifier
+ * @property { string } requesterId
+ * @property { string } processId
+ * @property { "draft" | "requested" | "received" | "accepted"} status
+ * @property {"routine" | "urgent" | "asap" | "stat"} [priority]
+ * @property { string } lastModified // date-time
+ */
+
 // Patient Resource //
 /**
  * @typedef {Object} Patient
@@ -101,7 +113,7 @@
  * @property {Reference<"Encounter">} [encounter] - Encounter related to the request
  * @property {Array<Reference<"Any">>} [supportingInformation] - Supporting information for fulfilling the medication
  * @property {string} [authoredOn] - DateTime when the request was initially authored
- * @property {Reference<"Device" | "Organization" | "Patient" | "Practitioner" | "PractitionerRole" | "RelatedPerson">} [requester] - Who or what requested the medication
+ * @property {string} [requesterId] - Who or what requested the medication
  * @property {boolean} [reported] - If true, request was reported rather than a primary record
  * @property {CodeableConcept} [performerType] - Desired performer of medication administration
  * @property {Array<Reference<"CareTeam" | "DeviceDefinition" | "HealthcareService" | "Organization" | "Patient" | "Practitioner" | "PractitionerRole" | "RelatedPerson">>} [performer] - Intended performer of administration
@@ -131,6 +143,38 @@
  * @property {CodeableConcept} [substitution.allowedCodeableConcept] - Concept indicating substitution allowance
  * @property {CodeableConcept} [substitution.reason] - Reason for allowing or disallowing substitution
  * @property {Array<Reference<"Provenance">>} [eventHistory] - List of events in the lifecycle
+ */
+
+/**
+ * @typedef {Object} MedicationDispense
+ * @property {"MedicationDispense"} resourceType - FHIR resource type.
+ * @property {string} identifier - Unique identifier.
+ * @property {Array<Reference>} basedOn - CarePlan references.
+ * @property {Array<Reference>} partOf - MedicationAdministration or Procedure.
+ * @property {"preparation" | "in-progress" | "cancelled" | "on-hold" | "completed" | "entered-in-error" | "stopped" | "declined" | "unknown"} status - Status of the dispense.
+ * @property {string} statusChanged - DateTime when status changed.
+ * @property {Array<CodeableConcept>} category - Category of medication dispense.
+ * @property {string} medication - Reference to Medication resource.
+ * @property {string} subject - Patient receiving the medication.
+ * @property {string} performer - Who dispensed the medication.
+ * @property {string} location - Where dispense occurred.
+ * @property {string} authorizingPrescription - MedicationRequest references.
+ * @property {string} type - Type of dispense (e.g., trial fill).
+ * @property {Quantity} quantity - Amount dispensed.
+ * @property {Quantity} daysSupply - Days of medication supplied.
+ * @property {string} recorded - DateTime when recording started.
+ * @property {string} whenPrepared - DateTime when product was packaged.
+ * @property {string} whenHandedOver - DateTime when given to patient.
+ * @property {string} destination - Where the medication was sent.
+ * @property {string} receiver - Who received the medication.
+ * @property {Array<{ authorString: string, time: string, text: string }>} note - Notes about the dispense.
+ * @property {string} renderedDosageInstruction - Full dosage instructions.
+ * @property {Object} substitution - Substitution details.
+ * @property {boolean} substitution.wasSubstituted - Whether substitution occurred.
+ * @property {CodeableConcept} substitution.type - Type of substitution.
+ * @property {Array<CodeableConcept>} substitution.reason - Reason for substitution.
+ * @property {string} substitution.responsibleParty - Who authorized the substitution.
+ * @property {Array<Reference>} eventHistory - History of lifecycle events.
  */
 
 export default {};

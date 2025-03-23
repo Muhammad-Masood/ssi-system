@@ -37,12 +37,9 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "./database/firebase.js";
-import {
-  create_medication_request,
-  create_patient_resource,
-  get_medication_request,
-  get_patient_resource,
-} from "./services/fhir/index.js";
+import { create_medication_request, get_medication_request } from "./services/fhir/medication/index.js";
+import { create_patient_resource, get_patient_resource } from "./services/fhir/patient/index.js";
+
 dotenv.config();
 
 const app = express();
@@ -461,17 +458,27 @@ app.get("/fhir/resource/get_patient/:id", async (req, res) => {
       .json({ error: "Error retrieving patient", details: String(error) });
   }
 });
+
 app.post("/fhir/resource/create_medication_request", async (req, res) => {
-  const { medicationRequest } = req.body;
-  // const userPrivateKey = req.headers["private-key"];
-  // if (!userPrivateKey) {
-  //   return res.status(400).json({ error: "Invalid request body." });
-  // }
-  const docId = await create_medication_request(medicationRequest);
-  return res.status(200).json({
-    message: "Patient medication request created successfully!",
-    docId: docId,
-  });
+  try {
+    const { medicationRequest } = req.body;
+    // const userPrivateKey = req.headers["private-key"];
+    // if (!userPrivateKey) {
+    //   return res.status(400).json({ error: "Invalid request body." });
+    // }
+    console.log(medicationRequest);
+    const docId = await create_medication_request(medicationRequest);
+    console.log(docId);
+    return res.status(200).json({
+      message: "Patient medication request created successfully!",
+      docId: docId,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: "Error retrieving medication request",
+      details: String(error),
+    });
+  }
 });
 
 app.get("/fhir/resource/get_med_req/:id", async (req, res) => {
