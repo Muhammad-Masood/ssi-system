@@ -6,8 +6,12 @@ import Logout from "../../components/Logout";
 
 const page = async () => {
   const session = await getSession();
-  return (
-    <div className="">{session ? "You are already Signed In" : <Login />}</div>
+  return session ? (
+    <div className="justify-center flex items-center">
+      <p className="mt-[4rem]">You are already Signed In</p>
+    </div>
+  ) : (
+    <Login />
   );
 };
 

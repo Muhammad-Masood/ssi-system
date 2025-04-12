@@ -1,12 +1,4 @@
 import dotenv from "dotenv";
-import {
-  bytesHexToString,
-  contract,
-  pinataIPFSGateway,
-  provider,
-  storeDataOnIPFS,
-  stringToBytesHex,
-} from "../../index.js";
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import {
@@ -19,7 +11,8 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { db } from "../../database/firebase.js";
+import { storeDataOnIPFS } from "../../../index.js";
+import { db } from "../../../database/firebase.js";
 
 dotenv.config();
 

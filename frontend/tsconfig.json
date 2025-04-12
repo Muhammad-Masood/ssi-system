@@ -33,7 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-, "app/(admin)/admin/requests"  ],
+, "app/(admin)/admin/requests", "app/()/patients/create"  ],
   "exclude": [
     "node_modules"
   ]

@@ -10,7 +10,7 @@ import {
   provider,
   storeDataOnIPFS,
   stringToBytesHex,
-} from "../../index.js";
+} from "../../../index.js";
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import {
@@ -23,9 +23,9 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { db } from "../../database/firebase.js";
 // import { Patient, MedicationRequest } from "../../types/schema.js";
-import { encryptCIDHash } from "../credential/index.js";
+import { db } from "../../../database/firebase.js";
+import { encryptCIDHash } from "../../credential/index.js";
 
 dotenv.config();
 

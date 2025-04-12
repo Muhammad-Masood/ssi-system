@@ -30,10 +30,10 @@ export type NavbarLink = {
 };
 
 export const userNavbarLinks: NavbarLink[] = [
-  {
-    name: "Profile",
-    href: "/profile",
-  },
+  // {
+  //   name: "Profile",
+  //   href: "/profile",
+  // },
   {
     name: "Auth",
     href: "/auth",
@@ -103,6 +103,7 @@ export type RevokedCredential = {
 
 export type ReqVcData = {
   id: string;
+  userId: string;
   status: "pending" | "approved" | "rejected";
   holderDID: string;
   fullName: string;

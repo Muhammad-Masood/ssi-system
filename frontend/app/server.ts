@@ -112,14 +112,14 @@ export const deleteUserDid = async (
 };
 
 export const issueBankIdVc = async (data: ReqVcData, privateKey: string) => {
-  const { holderDid, fullName, birthDate, nationalID } = data;
+  const { holderDID, fullName, birthDate, nationalID } = data;
   try {
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/issue_bank_id_vc`,
       {
         fullName,
         birthDate,
-        holderDid,
+        holderDID,
         nationalID,
       },
       {

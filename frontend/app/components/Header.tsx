@@ -46,7 +46,7 @@ export function Header({ session }: { session: Session | null }) {
             href="/"
             className="text-2xl lg:text-4xl font-bold text-gray-900 tracking-wide hover:text-blue-700 transition-colors duration-200"
           >
-            SSI KIT
+            {!pathName.startsWith("/dashboard") && "SSI KIT"}
           </Link>
         </div>
 
@@ -119,8 +119,10 @@ export function Header({ session }: { session: Session | null }) {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Link href="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
+                {/* <DropdownMenuItem>Settings</DropdownMenuItem> */}
                 <DropdownMenuItem
                   onClick={() => signOut({ callbackUrl: "/" })}
                   className="cursor-pointer"

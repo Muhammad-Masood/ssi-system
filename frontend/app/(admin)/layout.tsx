@@ -30,7 +30,7 @@ export default async function RootLayout({
       <body className={inter.className}>
         <Providers session={session}>
           <WalletContextProvider>
-            <Header session={session} />
+            {/* <Header session={session} /> */}
             <SidebarProvider>
               <DashboardSidebar />
               {children}

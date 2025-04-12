@@ -44,7 +44,7 @@ const credentialTypes = [
   // { value: "education", label: "Educational Credential" },
 ];
 
-export function RequestForm() {
+export function RequestForm({ userId }: { userId: string | undefined | null }) {
   const router = useRouter();
   const [step, setStep] = React.useState(2);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -57,6 +57,7 @@ export function RequestForm() {
   //   React.useState<string>("");
   const [data, setData] = React.useState<ReqVcData>({
     id: "",
+    userId: "",
     status: "pending",
     holderDID: "",
     fullName: "",
@@ -88,26 +89,39 @@ export function RequestForm() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsSubmitting(true);
-    console.log("VcReq Data: ", data);
-    try {
-      const signer = wallet.signer!;
-      console.log(signer.privateKey);
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/submit_bank_id_vc_request`,
-        data,
-        {
-          headers: {
-            "private-key": signer.privateKey,
-          },
-        }
-      );
-      console.log(response.data);
-      toast.success(`Bank Id VC request submitted successfully`);
-    } catch (error) {
-      console.log(error);
-      toast.error("Failed to process request", { description: String(error) });
-    } finally {
-      setIsSubmitting(false);
+    if (userId) {
+      console.log("VcReq Data: ", data);
+      if (!wallet.isConnected) {
+        toast.error("Connect your wallet!");
+        setIsSubmitting(false);
+        return;
+      }
+      try {
+        console.log("log vc req data before req: ",data);
+        data.userId = userId;
+        const signer = wallet.signer!;
+        console.log(signer.privateKey);
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/submit_bank_id_vc_request`,
+          data,
+          {
+            headers: {
+              "private-key": signer.privateKey,
+            },
+          }
+        );
+        console.log(response.data);
+        toast.success(`Bank Id VC request submitted successfully`);
+      } catch (error) {
+        console.log(error);
+        toast.error("Failed to process request", {
+          description: String(error),
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      toast.error("User not found! Please login.");
     }
     setStep(4);
     router.refresh();
@@ -139,7 +153,7 @@ export function RequestForm() {
               <div className="space-y-2">
                 <Label htmlFor="did">Decentralized Identifier (DID)</Label>
                 <Input
-                  id="holderDid"
+                  id="holderDID"
                   placeholder="did:example:123..."
                   required
                   value={data.holderDID}

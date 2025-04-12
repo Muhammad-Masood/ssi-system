@@ -41,7 +41,7 @@ const revokeCredential = async (
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/vc/revoke_vc`,
       {
         cidHash: cid,
-        endTime
+        endTime,
       },
       {
         headers: {
@@ -79,7 +79,11 @@ const CredentialList = ({
 
   const handleRevoke = async (cid: string) => {
     setIsRevoking(cid);
-    const success = await revokeCredential(cid, wallet.signer, revocationEndDate);
+    const success = await revokeCredential(
+      cid,
+      wallet.signer,
+      revocationEndDate
+    );
     // if (success) {
     //   setCredentials(credentials.filter((c) => c !== cid));
     // }

@@ -69,6 +69,18 @@ const getVcRequests = async () => {
   }
 };
 
+const getUserVcRequests = async (userId) => {
+  try {
+    const vcReqRef = collection(db, "vc_requests");
+    const q = query(vcReqRef, where("userId", "==", userId));
+    const querySnapshot = await getDocs(q);
+    const docs = querySnapshot.docs.map((doc) => doc.data());
+    return docs;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 const generateMedicalVcPayload = () => {};
 
 const generateBankIdVcPayload = (
@@ -429,4 +441,5 @@ export {
   createBankIdVc,
   submitVcRequest,
   getVcRequests,
+  getUserVcRequests,
 };

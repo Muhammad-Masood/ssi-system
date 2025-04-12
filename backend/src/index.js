@@ -21,6 +21,7 @@ import {
   createBankIdVc,
   submitVcRequest,
   getVcRequests,
+  getUserVcRequests,
 } from "./services/credential/index.js";
 import axios from "axios";
 import crypto from "crypto";
@@ -32,13 +33,22 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   query,
   setDoc,
   where,
 } from "firebase/firestore";
 import { db } from "./database/firebase.js";
-import { create_medication_request, get_medication_request } from "./services/fhir/medication/index.js";
-import { create_patient_resource, get_patient_resource } from "./services/fhir/patient/index.js";
+import {
+  create_medication_dispense,
+  create_medication_request,
+  get_medication_dispense,
+  get_medication_request,
+} from "./services/fhir/medication/index.js";
+import {
+  create_patient_resource,
+  get_patient_resource,
+} from "./services/fhir/patient/index.js";
 
 dotenv.config();
 
@@ -190,6 +200,12 @@ app.get("/vc", (req, res) => {
 app.get("/vc/get_vc_requests", async (req, res) => {
   const vc_requests = await getVcRequests();
   return res.status(200).json({ vc_requests });
+});
+
+app.get("/vc/get_user_vc_requests/:userId", async (req, res) => {
+  const userId = req.params.userId;
+  const user_vc_requests = await getUserVcRequests(userId);
+  return res.status(200).json({ user_vc_requests });
 });
 
 app.post("/vc/submit_bank_id_vc_request", async (req, res) => {
@@ -475,7 +491,7 @@ app.post("/fhir/resource/create_medication_request", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      error: "Error retrieving medication request",
+      error: "Error creating medication request",
       details: String(error),
     });
   }
@@ -494,12 +510,107 @@ app.get("/fhir/resource/get_med_req/:id", async (req, res) => {
   }
 });
 
+/**
+ * Returns all medication request records.
+ */
+app.get("/fhir/resource/get_all_medication_requests", async (req, res) => {
+  try {
+    const medReqRef = collection(db, "fhir_medication_request");
+    const querySnapshot = await getDocs(medReqRef);
+
+    const requests = querySnapshot.docs.map((doc) => doc.data());
+    return res.status(200).json(requests);
+  } catch (error) {
+    res.status(500).json({
+      error: "Error fetching all medication requests",
+      details: String(error),
+    });
+  }
+});
+
+/**
+ * Returns all patient resources.
+ */
+app.get("/fhir/resource/get_all_patients", async (req, res) => {
+  try {
+    const patientRef = collection(db, "fhir_patient");
+    const querySnapshot = await getDocs(patientRef);
+
+    const patients = querySnapshot.docs.map((doc) => doc.data());
+    return res.status(200).json(patients);
+  } catch (error) {
+    res.status(500).json({
+      error: "Error fetching all patients",
+      details: String(error),
+    });
+  }
+});
+
+/**
+ * This resource covers the supply of medications to a patient. Examples include dispensing and pick-up from
+ * an outpatient or community pharmacy, dispensing patient-specific medications from inpatient pharmacy to ward,
+ * as well as issuing a single dose from ward stock to a patient for consumption.
+ * The medication dispense can be the result of a pharmacy system responding to a medication order.
+ */
+app.post("/fhir/resource/create_medication_dispense", async (req, res) => {
+  try {
+    const { medicationDispense } = req.body;
+    // const userPrivateKey = req.headers["private-key"];
+    // if (!userPrivateKey) {
+    //   return res.status(400).json({ error: "Invalid request body." });
+    // }
+    console.log(medicationDispense);
+    const docId = await create_medication_dispense(medicationDispense);
+    console.log(docId);
+    return res.status(200).json({
+      message: "Patient medication dispense created successfully!",
+      docId: docId,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: "Error creating medication dispense",
+      details: String(error),
+    });
+  }
+});
+
+app.get("/fhir/resource/get_med_disp/:id", async (req, res) => {
+  try {
+    const med_disp_id = req.params.id;
+    const med_disp = await get_medication_dispense(med_disp_id);
+    res.json(med_disp);
+  } catch (error) {
+    res.status(500).json({
+      error: "Error retrieving medication dispense",
+      details: String(error),
+    });
+  }
+});
+
+/**
+ * Returns all medication dispense records.
+ */
+app.get("/fhir/resource/get_all_medication_dispenses", async (req, res) => {
+  try {
+    const dispRef = collection(db, "fhir_medication_dispense");
+    const querySnapshot = await getDocs(dispRef);
+
+    const dispenses = querySnapshot.docs.map((doc) => doc.data());
+    return res.status(200).json(dispenses);
+  } catch (error) {
+    res.status(500).json({
+      error: "Error fetching all medication dispenses",
+      details: String(error),
+    });
+  }
+});
+
 app.listen(port, async () => {
   console.log("Server is running on port " + port);
   // const signer = new ethers.Wallet("f013ecdaeaa6955889a6a38e67f391b67d328dd9b3afbc6574ac35c88fd5d0b3");
   // const buffer = Buffer.from([
   //   0x18, 0x98, 0x61, 0x0e, 0x80, 0x4e, 0x21, 0x60, 0x66, 0x82, 0x4e, 0x8c
-  // ]);z1
+  // ]);
 
   // // Convert the buffer to a base64 string
   // const base64String = buffer.toString("base64");
