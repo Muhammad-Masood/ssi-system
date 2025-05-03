@@ -30,10 +30,10 @@ export type NavbarLink = {
 };
 
 export const userNavbarLinks: NavbarLink[] = [
-  // {
-  //   name: "Profile",
-  //   href: "/profile",
-  // },
+  {
+    name: "Profile",
+    href: "/profile",
+  },
   {
     name: "Auth",
     href: "/auth",
@@ -42,32 +42,44 @@ export const userNavbarLinks: NavbarLink[] = [
     name: "Request VC",
     href: "/requestvc",
   },
-];
-
-export const issuerNavbarLinks: NavbarLink[] = [
-  {
-    name: "Profile",
-    href: "/profile",
-  },
   {
     name: "Issue Credentials",
     href: "/issue",
   },
   {
-    name: "Auth",
-    href: "/auth",
-  },
-];
-
-export const verifierNavbarLinks: NavbarLink[] = [
-  {
     name: "Verify",
     href: "/verify",
   },
   {
-    name: "Auth",
-    href: "/auth",
+    name: "Verify AI",
+    href: "/verifyai",
   },
+];
+
+export const issuerNavbarLinks: NavbarLink[] = [
+//   {
+//     name: "Profile",
+//     href: "/profile",
+//   },
+//   {
+//     name: "Issue Credentials",
+//     href: "/issue",
+//   },
+//   {
+//     name: "Auth",
+//     href: "/auth",
+//   },
+];
+
+export const verifierNavbarLinks: NavbarLink[] = [
+  // {
+  //   name: "Verify",
+  //   href: "/verify",
+  // },
+  // {
+  //   name: "Auth",
+  //   href: "/auth",
+  // },
 ];
 
 export const adminNavbarLinks: NavbarLink[] = [

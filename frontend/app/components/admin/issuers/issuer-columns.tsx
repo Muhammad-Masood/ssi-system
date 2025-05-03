@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { type ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal } from 'lucide-react'
+import { type ColumnDef } from "@tanstack/react-table";
+import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -20,18 +20,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
 export type Issuer = {
-  id: string
-  name: string
-  type: string
-  email: string
-  status: "active" | "pending" | "suspended"
-  createdAt: string
-  verifiedAt: string | null
-  location: string
-}
+  id: string;
+  name: string;
+  type: string;
+  email: string;
+  status: "active" | "pending" | "suspended";
+  createdAt: string;
+  verifiedAt: string | null;
+  location: string;
+};
 
 export const issuerColumns: ColumnDef<Issuer>[] = [
   {
@@ -45,9 +45,20 @@ export const issuerColumns: ColumnDef<Issuer>[] = [
           Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
-      )
+      );
     },
     cell: ({ row }) => {
+      type Status = "active" | "pending" | "suspended";
+
+      const statusVariantMap: Record<
+        Status,
+        "default" | "secondary" | "destructive"
+      > = {
+        active: "default",
+        pending: "secondary",
+        suspended: "destructive",
+      };
+      const status = row.getValue("status") as Status;
       return (
         <Dialog>
           <DialogTrigger asChild>
@@ -78,23 +89,13 @@ export const issuerColumns: ColumnDef<Issuer>[] = [
               <div className="grid grid-cols-4 items-center gap-4">
                 <span className="font-medium">Status</span>
                 <span className="col-span-3">
-                  <Badge
-                    variant={
-                      {
-                        active: "default",
-                        pending: "secondary",
-                        suspended: "destructive",
-                      }[row.getValue("status")]
-                    }
-                  >
-                    {row.getValue("status")}
-                  </Badge>
+                  <Badge variant={statusVariantMap[status]}>{status}</Badge>
                 </span>
               </div>
             </div>
           </DialogContent>
         </Dialog>
-      )
+      );
     },
   },
   {
@@ -109,20 +110,19 @@ export const issuerColumns: ColumnDef<Issuer>[] = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
-      const status = row.getValue("status") as string
-      return (
-        <Badge
-          variant={
-            {
-              active: "default",
-              pending: "secondary",
-              suspended: "destructive",
-            }[status]
-          }
-        >
-          {status}
-        </Badge>
-      )
+      type Status = "active" | "pending" | "suspended";
+
+      const statusVariantMap: Record<
+        Status,
+        "default" | "secondary" | "destructive"
+      > = {
+        active: "default",
+        pending: "secondary",
+        suspended: "destructive",
+      };
+      const status = row.getValue("status") as Status;
+
+      return <Badge variant={statusVariantMap[status]}>{status}</Badge>;
     },
   },
   {
@@ -140,16 +140,16 @@ export const issuerColumns: ColumnDef<Issuer>[] = [
           Created
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
-      )
+      );
     },
     cell: ({ row }) => {
-      return new Date(row.getValue("createdAt")).toLocaleDateString()
+      return new Date(row.getValue("createdAt")).toLocaleDateString();
     },
   },
   {
     id: "actions",
     cell: ({ row }) => {
-      const issuer = row.original
+      const issuer = row.original;
 
       return (
         <DropdownMenu>
@@ -182,7 +182,7 @@ export const issuerColumns: ColumnDef<Issuer>[] = [
             )}
           </DropdownMenuContent>
         </DropdownMenu>
-      )
+      );
     },
   },
-]
+];

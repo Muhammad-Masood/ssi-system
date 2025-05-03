@@ -57,14 +57,7 @@ export function Header({ session }: { session: Session | null }) {
           // menuOpen ? "flex" : "hidden"
           // } flex-col md:flex md:flex-row md:items-center gap-4 md:gap-8 mt-4 md:mt-0 absolute md:static top-16 left-0 right-0 bg-white md:bg-transparent p-4 md:p-0 shadow-lg md:shadow-none`}
         >
-          {(wallet.tab === "issuer"
-            ? issuerNavbarLinks
-            : wallet.tab === "verifier"
-            ? verifierNavbarLinks
-            : isAdminPath
-            ? adminNavbarLinks
-            : userNavbarLinks
-          ).map((link: NavbarLink, index: number) => (
+          {userNavbarLinks.map((link: NavbarLink, index: number) => (
             <Link
               href={link.href}
               key={index}

@@ -127,7 +127,7 @@ export default function RequestsManager({
                 </div>
                 <h3 className="font-medium mb-1">No incoming requests</h3>
                 <p className="text-sm text-muted-foreground">
-                  You don't have any incoming credential requests.
+                  You don&apos;t have any incoming credential requests.
                 </p>
               </div>
             )}

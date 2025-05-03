@@ -6,13 +6,13 @@ import Features from "../components/Features";
 import Footer from "../components/Footer";
 import { NextResponse } from "next/server";
 
-export async function middleware(request: Request) {
-  const url = new URL(request.url);
-  const searchParams = url.searchParams;
-  return NextResponse.rewrite(
-    new URL(`/?tab=${searchParams.get("tab")}`, request.url)
-  );
-}
+// export async function middleware(request: Request) {
+//   const url = new URL(request.url);
+//   const searchParams = url.searchParams;
+//   return NextResponse.rewrite(
+//     new URL(`/?tab=${searchParams.get("tab")}`, request.url)
+//   );
+// }
 
 export default async function Home({
   searchParams,
