@@ -5,15 +5,32 @@ import joblib
 from datetime import datetime
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
+from fastapi.middleware.cors import CORSMiddleware
+import os
+
+
+# origin_client_https = os.getenv("ORIGIN_CLIENT_HTTPS")
+
+origins = [
+    "http://localhost:3000",
+    # origin_client_https,
+]
 
 app = FastAPI(title="SSI AI API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 model = joblib.load("certificate_verification_model.pkl")
 issuer_encoder = joblib.load("issuer_encoder.pkl")
 institution_encoder = joblib.load("institution_encoder.pkl")
 
-KNOWN_ISSUERS = {"medical council of uk", "indian medical association", "canadian medical board", "ama (usa)", "australian health practitioner regulation agency"}
-KNOWN_INSTITUTIONS = {"harvard medical school", "aiims delhi", "university of toronto medical faculty", "oxford medical college", "sydney medical school"}
+KNOWN_ISSUERS = {"norwegian directorate of health", "medical council of uk", "indian medical association", "canadian medical board", "ama (usa)", "australian health practitioner regulation agency"}
+KNOWN_INSTITUTIONS = {"trondheim health authority","stavanger health trust", "harvard medical school", "aiims delhi", "university of toronto medical faculty", "oxford medical college", "sydney medical school"}
 VALID_PREFIXES = ['ACC-', 'CERT-', 'MD-', 'LIC-']
 
 class CertificateRequest(BaseModel):
@@ -31,6 +48,7 @@ def compute_days_valid(issue: str, expiry: str):
     return (expiry_dt - issue_dt).days
 
 def check_valid_issuer(issuer: str):
+    print(issuer.lower().strip())
     return issuer.lower().strip() in KNOWN_ISSUERS
 
 def check_valid_institution(inst: str):
@@ -53,6 +71,7 @@ request body -> cert: {
 @app.post("/verify_certificate_ai")
 def verify_certificate(cert: CertificateRequest):
     # Derive new fields
+    print(cert)
     days_valid = compute_days_valid(cert.issue_date, cert.expiration_date)
     valid_issuer = check_valid_issuer(cert.issuer)
     valid_institution = check_valid_institution(cert.institution)

@@ -96,7 +96,8 @@ export function MedicalLicenseVerification() {
   const extractCertFieldsFromText = (text: string) => {
     const doctorNameMatch = /Full Name:\s*(.*?)\s*Date of Birth:/.exec(text);
     const licenseNumberMatch = /HPR Number.*?:\s*(HPR\d+)/.exec(text);
-    const issuerMatch = /Issuing Authority:\s*(.*?)\s*Address:/.exec(text);
+    const issuerMatch = /Issuing Authority:\s*([^\n\/]*)/.exec(text);
+    // const issuerMatch = /Issuing Authority:\s*(.*?)\s*Address:/.exec(text);
     const institutionMatch = /Verifier\/Institution:\s*(.*?)\s*Purpose:/.exec(
       text
     );
@@ -120,60 +121,19 @@ export function MedicalLicenseVerification() {
     return cert;
   };
 
-  const simulateUpload = async () => {
-    setStatus("uploading");
-    setUploadProgress(0);
-
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          // setStatus("processing");
-          return 100;
-        }
-        return prev + 5;
-      });
-    }, 100);
-    console.log("file:  ", file);
-    if (!file) return;
-    setTimeout(async () => {
-      setStatus("processing");
-
-      try {
-        const text = await pdfToText(file);
-
-        console.log("extracted text: ", text);
-        // Send extracted text to FastAPI for model prediction
-        // const response = await axios.post(
-        //   `${process.env.NEXT_PUBLIC_API_BASE_URL}/verify_certificate`,
-        //   {}
-        // );
-        // const data = await response.data;
-        // console.log("response_data: ", data);
-        // setCertificateData(data);
-        setStatus("extracted");
-        setActiveTab("information");
-      } catch (error) {
-        console.error("Extraction failed", error);
-        setStatus("rejected");
-      }
-    }, 1000);
-  };
-
   const handleVerify = async () => {
+    if (!certificateData) return;
     try {
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/verify_certificate`,
+        `${process.env.NEXT_PUBLIC_AI_API_BASE_URL}/verify_certificate_ai`,
         certificateData
       );
       const data = await response.data;
       console.log("response_data: ", data);
-      const isVerified = data.prediction === "Legitimate";
-      setStatus(isVerified ? "verified" : "rejected");
+      setStatus(data.prediction == "Fraudulent" ? "rejected" : "verified");
+      setActiveTab("verification");
     } catch (error) {
       console.log(error);
-    } finally {
-      setStatus("verified");
     }
   };
 
@@ -345,14 +305,14 @@ export function MedicalLicenseVerification() {
                         {certificateData.license_number}
                       </p>
                     </div>
-                    {/* <div className="space-y-1">
+                    <div className="space-y-1">
                       <p className="flex items-center gap-2 text-sm font-medium text-gray-500">
-                        <Award className="h-4 w-4" /> Specialization
+                        <Award className="h-4 w-4" /> Institution
                       </p>
                       <p className="text-lg text-gray-800">
-                        {certificateData.}
+                        {certificateData.institution}
                       </p>
-                    </div> */}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
